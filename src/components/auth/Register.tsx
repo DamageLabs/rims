@@ -1,6 +1,6 @@
 import { useState, FormEvent } from 'react';
-import { Link } from 'react-router-dom';
-import { Card, Form, Button, Row, Col, Alert } from 'react-bootstrap';
+import { Link, useNavigate } from 'react-router-dom';
+import { Card, Form, Button, Row, Col } from 'react-bootstrap';
 import { useAuth } from '../../contexts/AuthContext';
 import { useAlert } from '../../contexts/AlertContext';
 
@@ -9,9 +9,9 @@ export default function Register() {
   const [password, setPassword] = useState('');
   const [passwordConfirmation, setPasswordConfirmation] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [registrationComplete, setRegistrationComplete] = useState(false);
   const { register } = useAuth();
-  const { showError } = useAlert();
+  const { showError, showSuccess } = useAlert();
+  const navigate = useNavigate();
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -20,7 +20,8 @@ export default function Register() {
     try {
       const result = await register({ email, password, passwordConfirmation });
       if (result.success) {
-        setRegistrationComplete(true);
+        showSuccess('Registration successful! Please enter the verification code sent to your email.');
+        navigate(`/verify-email?email=${encodeURIComponent(email)}`);
       }
     } catch (error) {
       showError(error instanceof Error ? error.message : 'Registration failed.');
@@ -28,43 +29,6 @@ export default function Register() {
       setIsLoading(false);
     }
   };
-
-  if (registrationComplete) {
-    return (
-      <Row className="justify-content-center">
-        <Col md={6} lg={4}>
-          <Card className="border-success">
-            <Card.Header className="bg-success text-white">
-              <h4 className="mb-0">Check Your Email</h4>
-            </Card.Header>
-            <Card.Body>
-              <Alert variant="success">
-                <Alert.Heading>Registration Successful!</Alert.Heading>
-                <p>
-                  We've sent a verification email to <strong>{email}</strong>.
-                </p>
-                <p className="mb-0">
-                  Please click the link in the email to verify your account before signing in.
-                </p>
-              </Alert>
-              <hr />
-              <p className="text-muted small">
-                Didn't receive the email? Check your spam folder or{' '}
-                <Link to={`/resend-verification?email=${encodeURIComponent(email)}`}>
-                  request a new verification email
-                </Link>.
-              </p>
-              <div className="d-grid gap-2 mt-3">
-                <Link to="/login" className="btn btn-primary">
-                  Go to Sign In
-                </Link>
-              </div>
-            </Card.Body>
-          </Card>
-        </Col>
-      </Row>
-    );
-  }
 
   return (
     <Row className="justify-content-center">

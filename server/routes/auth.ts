@@ -9,7 +9,15 @@ const router = Router();
 const TOKEN_EXPIRY_HOURS = 24;
 
 function generateToken(): string {
-  return crypto.randomUUID();
+  // Generate 8-character alphanumeric code (uppercase letters and numbers)
+  // Excluded confusing chars: I, O, 0, 1
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let code = '';
+  const randomBytes = crypto.randomBytes(8);
+  for (let i = 0; i < 8; i++) {
+    code += chars[randomBytes[i] % chars.length];
+  }
+  return code;
 }
 
 function getTokenExpiryDate(): string {
@@ -83,14 +91,14 @@ router.post('/verify-email', async (req: Request, res: Response) => {
     const { token } = req.body;
 
     if (!token) {
-      res.status(400).json({ error: 'Verification token is required' });
+      res.status(400).json({ error: 'Verification code is required' });
       return;
     }
 
-    // Find user by token
-    const user = userQueries.findByVerificationToken(token);
+    // Find user by token (uppercase for case-insensitive matching)
+    const user = userQueries.findByVerificationToken(token.toUpperCase());
     if (!user) {
-      res.status(400).json({ error: 'Invalid or expired verification token' });
+      res.status(400).json({ error: 'Invalid or expired verification code' });
       return;
     }
 
@@ -98,7 +106,7 @@ router.post('/verify-email', async (req: Request, res: Response) => {
     if (user.emailVerificationTokenExpiresAt) {
       const expiresAt = new Date(user.emailVerificationTokenExpiresAt);
       if (expiresAt < new Date()) {
-        res.status(400).json({ error: 'Verification token has expired. Please request a new one.' });
+        res.status(400).json({ error: 'Verification code has expired. Please request a new one.' });
         return;
       }
     }

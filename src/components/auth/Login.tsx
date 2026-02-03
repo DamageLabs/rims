@@ -39,14 +39,17 @@ export default function Login() {
               <Alert variant="warning">
                 <Alert.Heading>Email Not Verified</Alert.Heading>
                 <p>
-                  Your email address has not been verified yet. Please check your inbox for a verification email.
+                  Your email address has not been verified yet. Please enter the verification code sent to your email.
                 </p>
                 <hr />
-                <p className="mb-0">
-                  <Link to={`/resend-verification?email=${encodeURIComponent(email)}`}>
-                    Resend verification email
+                <div className="d-grid gap-2">
+                  <Link to={`/verify-email?email=${encodeURIComponent(email)}`} className="btn btn-warning">
+                    Enter Verification Code
                   </Link>
-                </p>
+                  <Link to={`/resend-verification?email=${encodeURIComponent(email)}`} className="btn btn-outline-secondary btn-sm">
+                    Resend code
+                  </Link>
+                </div>
               </Alert>
             )}
             <Form onSubmit={handleSubmit}>
