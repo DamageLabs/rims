@@ -50,11 +50,11 @@ export default function ItemDetail() {
   };
 
   const handleCompareVendorPrices = async () => {
-    if (!item?.vendorPartNumber) return;
+    if (!item?.partNumber) return;
 
     setIsLoadingPrices(true);
     try {
-      const prices = await vendorService.compareVendorPrices(item.vendorPartNumber);
+      const prices = await vendorService.compareVendorPrices(item.partNumber);
       setVendorPrices(prices);
     } catch {
       showError('Failed to fetch vendor prices.');
@@ -101,8 +101,8 @@ export default function ItemDetail() {
         </Row>
 
         <Row className="mb-2">
-          <Col md={3} className="text-muted">Product Model Number</Col>
-          <Col md={9}>{item.productModelNumber}</Col>
+          <Col md={3} className="text-muted">Model Number</Col>
+          <Col md={9}>{item.modelNumber}</Col>
         </Row>
 
         <Row className="mb-2">
@@ -111,8 +111,8 @@ export default function ItemDetail() {
         </Row>
 
         <Row className="mb-2">
-          <Col md={3} className="text-muted">Vendor Part Number</Col>
-          <Col md={9}>{item.vendorPartNumber}</Col>
+          <Col md={3} className="text-muted">Part Number</Col>
+          <Col md={9}>{item.partNumber}</Col>
         </Row>
 
         <Row className="mb-2">
@@ -176,7 +176,7 @@ export default function ItemDetail() {
         <CostHistoryChart itemId={item.id} currentValue={item.unitValue} />
 
         {/* Vendor Price Comparison */}
-        {item.vendorPartNumber && (
+        {item.partNumber && (
           <Card className="mt-3">
             <Card.Header className="d-flex justify-content-between align-items-center">
               <h6 className="mb-0">Vendor Price Comparison</h6>

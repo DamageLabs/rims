@@ -24,8 +24,8 @@ export default function ItemForm() {
   const [formData, setFormData] = useState<ItemFormData>({
     name: '',
     description: '',
-    productModelNumber: '',
-    vendorPartNumber: '',
+    modelNumber: '',
+    partNumber: '',
     vendorName: '',
     quantity: 0,
     unitValue: 0,
@@ -63,8 +63,8 @@ export default function ItemForm() {
         setFormData({
           name: item.name,
           description: item.description,
-          productModelNumber: item.productModelNumber,
-          vendorPartNumber: item.vendorPartNumber,
+          modelNumber: item.modelNumber,
+          partNumber: item.partNumber,
           vendorName: item.vendorName,
           quantity: item.quantity,
           unitValue: item.unitValue,
@@ -152,14 +152,14 @@ export default function ItemForm() {
   };
 
   const handleVendorLookup = async () => {
-    if (!formData.vendorName || !formData.vendorPartNumber) {
+    if (!formData.vendorName || !formData.partNumber) {
       showError('Please enter vendor name and part number first.');
       return;
     }
 
     setIsLookingUpPrice(true);
     try {
-      const result = await vendorService.lookupPrice(formData.vendorName, formData.vendorPartNumber);
+      const result = await vendorService.lookupPrice(formData.vendorName, formData.partNumber);
       if (result) {
         setFormData((prev) => ({
           ...prev,
@@ -282,12 +282,12 @@ export default function ItemForm() {
             </Row>
 
             <Row className="mb-3">
-              <Form.Label column sm={3}>Product Model Number</Form.Label>
+              <Form.Label column sm={3}>Model Number</Form.Label>
               <Col sm={5}>
                 <Form.Control
                   type="text"
-                  name="productModelNumber"
-                  value={formData.productModelNumber}
+                  name="modelNumber"
+                  value={formData.modelNumber}
                   onChange={handleChange}
                 />
               </Col>
@@ -310,19 +310,19 @@ export default function ItemForm() {
             </Row>
 
             <Row className="mb-3">
-              <Form.Label column sm={3}>Vendor Part Number</Form.Label>
+              <Form.Label column sm={3}>Part Number</Form.Label>
               <Col sm={5}>
                 <div className="d-flex gap-2">
                   <Form.Control
                     type="text"
-                    name="vendorPartNumber"
-                    value={formData.vendorPartNumber}
+                    name="partNumber"
+                    value={formData.partNumber}
                     onChange={handleChange}
                   />
                   <Button
                     variant="outline-secondary"
                     onClick={handleVendorLookup}
-                    disabled={isLookingUpPrice || !formData.vendorName || !formData.vendorPartNumber}
+                    disabled={isLookingUpPrice || !formData.vendorName || !formData.partNumber}
                     title="Look up price from vendor"
                     aria-label="Look up vendor price"
                   >
@@ -330,7 +330,7 @@ export default function ItemForm() {
                   </Button>
                 </div>
                 <Form.Text className="text-muted">
-                  Enter vendor name and part number, then click Lookup for pricing
+                  Enter vendor name and part number, then click Lookup to check pricing
                 </Form.Text>
               </Col>
             </Row>

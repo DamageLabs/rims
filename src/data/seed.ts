@@ -39,8 +39,8 @@ const seedItems: Omit<Item, 'id'>[] = [
   {
     name: 'Arduino Uno',
     description: 'The Arduino Uno is a microcontroller board based on the ATmega328.',
-    productModelNumber: 'R3',
-    vendorPartNumber: '50',
+    modelNumber: 'R3',
+    partNumber: '50',
     vendorName: 'Adafruit',
     quantity: 8,
     unitValue: 24.95,
@@ -57,8 +57,8 @@ const seedItems: Omit<Item, 'id'>[] = [
   {
     name: 'Arduino Mega 2560',
     description: 'The Arduino Mega 2560 is a microcontroller board based on the ATmega2560.',
-    productModelNumber: 'R3',
-    vendorPartNumber: '191',
+    modelNumber: 'R3',
+    partNumber: '191',
     vendorName: 'Adafruit',
     quantity: 1,
     unitValue: 45.95,

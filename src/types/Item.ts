@@ -2,8 +2,8 @@ export interface Item {
   id: number;
   name: string;
   description: string;
-  productModelNumber: string;
-  vendorPartNumber: string;
+  modelNumber: string;
+  partNumber: string;
   vendorName: string;
   quantity: number;
   unitValue: number;

@@ -10,7 +10,7 @@ export function exportToCSV(items: Item[]): void {
     'Name',
     'Description',
     'Model Number',
-    'Vendor Part Number',
+    'Part Number',
     'Vendor Name',
     'Quantity',
     'Unit Value',
@@ -26,8 +26,8 @@ export function exportToCSV(items: Item[]): void {
     item.id,
     item.name,
     item.description,
-    item.productModelNumber,
-    item.vendorPartNumber,
+    item.modelNumber,
+    item.partNumber,
     item.vendorName,
     item.quantity,
     item.unitValue,
@@ -75,7 +75,7 @@ export function exportToPDF(items: Item[]): void {
   // Table
   const tableData = items.map((item) => [
     item.name,
-    item.productModelNumber,
+    item.modelNumber,
     item.quantity.toString(),
     formatCurrency(item.unitValue),
     formatCurrency(item.value),

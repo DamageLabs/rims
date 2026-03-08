@@ -15,7 +15,7 @@ import { exportToCSV, exportToPDF } from '../../utils/export';
 import { formatCurrency } from '../../utils/formatters';
 import { ITEMS_PER_PAGE, LOW_STOCK_THRESHOLD } from '../../constants/config';
 
-type SortField = 'name' | 'productModelNumber' | 'quantity' | 'unitValue' | 'value' | 'vendorName' | 'location' | 'category';
+type SortField = 'name' | 'modelNumber' | 'quantity' | 'unitValue' | 'value' | 'vendorName' | 'location' | 'category';
 type SortDirection = 'asc' | 'desc';
 
 interface SortHeaderProps {
@@ -98,8 +98,8 @@ export default function ItemList() {
           item.description.toLowerCase().includes(search) ||
           item.vendorName.toLowerCase().includes(search) ||
           item.location.toLowerCase().includes(search) ||
-          item.productModelNumber.toLowerCase().includes(search) ||
-          item.vendorPartNumber.toLowerCase().includes(search);
+          item.modelNumber.toLowerCase().includes(search) ||
+          item.partNumber.toLowerCase().includes(search);
         if (!matchesSearch) return false;
       }
 
@@ -305,7 +305,7 @@ export default function ItemList() {
                 />
               </th>
               <SortHeader field="name" currentField={sortField} direction={sortDirection} onSort={handleSort}>Item Name</SortHeader>
-              <SortHeader field="productModelNumber" currentField={sortField} direction={sortDirection} onSort={handleSort}>Model #</SortHeader>
+              <SortHeader field="modelNumber" currentField={sortField} direction={sortDirection} onSort={handleSort}>Model #</SortHeader>
               <SortHeader field="quantity" currentField={sortField} direction={sortDirection} onSort={handleSort}>Quantity</SortHeader>
               <SortHeader field="unitValue" currentField={sortField} direction={sortDirection} onSort={handleSort}>Unit Value</SortHeader>
               <SortHeader field="value" currentField={sortField} direction={sortDirection} onSort={handleSort}>Total Value</SortHeader>
@@ -329,7 +329,7 @@ export default function ItemList() {
                 <td>
                   <Link to={`/items/${item.id}`}>{item.name}</Link>
                 </td>
-                <td className="text-center">{item.productModelNumber}</td>
+                <td className="text-center">{item.modelNumber}</td>
                 <td className={`text-center ${item.quantity === 0 ? 'text-danger fw-bold' : item.quantity <= LOW_STOCK_THRESHOLD ? 'text-warning fw-bold' : ''}`}>
                   {item.quantity}
                 </td>

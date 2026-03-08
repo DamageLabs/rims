@@ -29,8 +29,8 @@ interface FilterConfig {
 
 const ALL_COLUMNS: ColumnConfig[] = [
   { key: 'name', label: 'Name', visible: true, sortable: true, type: 'string' },
-  { key: 'productModelNumber', label: 'Model #', visible: true, sortable: true, type: 'string' },
-  { key: 'vendorPartNumber', label: 'Part #', visible: false, sortable: true, type: 'string' },
+  { key: 'modelNumber', label: 'Model #', visible: true, sortable: true, type: 'string' },
+  { key: 'partNumber', label: 'Part #', visible: false, sortable: true, type: 'string' },
   { key: 'vendorName', label: 'Vendor', visible: true, sortable: true, type: 'string' },
   { key: 'quantity', label: 'Quantity', visible: true, sortable: true, type: 'number' },
   { key: 'unitValue', label: 'Unit Value', visible: true, sortable: true, type: 'currency' },

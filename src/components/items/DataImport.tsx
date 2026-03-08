@@ -11,8 +11,8 @@ import { useAlert } from '../../contexts/AlertContext';
 interface ImportRow {
   name: string;
   description: string;
-  productModelNumber: string;
-  vendorPartNumber: string;
+  modelNumber: string;
+  partNumber: string;
   vendorName: string;
   quantity: number;
   unitValue: number;
@@ -31,12 +31,13 @@ const COLUMN_MAPPINGS: Record<string, keyof ImportRow> = {
   'item name': 'name',
   description: 'description',
   desc: 'description',
-  'product model number': 'productModelNumber',
-  'model number': 'productModelNumber',
-  model: 'productModelNumber',
-  'vendor part number': 'vendorPartNumber',
-  'part number': 'vendorPartNumber',
-  partnumber: 'vendorPartNumber',
+  'product model number': 'modelNumber',
+  'model number': 'modelNumber',
+  modelnumber: 'modelNumber',
+  model: 'modelNumber',
+  'vendor part number': 'partNumber',
+  'part number': 'partNumber',
+  partnumber: 'partNumber',
   'vendor name': 'vendorName',
   vendor: 'vendorName',
   supplier: 'vendorName',
@@ -100,8 +101,8 @@ export default function DataImport() {
     return {
       name: String(row.name || '').trim(),
       description: String(row.description || '').trim(),
-      productModelNumber: String(row.productModelNumber || '').trim(),
-      vendorPartNumber: String(row.vendorPartNumber || '').trim(),
+      modelNumber: String(row.modelNumber || '').trim(),
+      partNumber: String(row.partNumber || '').trim(),
       vendorName: String(row.vendorName || '').trim(),
       quantity: Math.max(0, quantity),
       unitValue: Math.max(0, unitValue),
@@ -181,8 +182,8 @@ export default function DataImport() {
         const itemData: ItemFormData = {
           name: row.name,
           description: row.description,
-          productModelNumber: row.productModelNumber,
-          vendorPartNumber: row.vendorPartNumber,
+          modelNumber: row.modelNumber,
+          partNumber: row.partNumber,
           vendorName: row.vendorName,
           quantity: row.quantity,
           unitValue: row.unitValue,
@@ -211,8 +212,8 @@ export default function DataImport() {
     const headers = [
       'name',
       'description',
-      'productModelNumber',
-      'vendorPartNumber',
+      'modelNumber',
+      'partNumber',
       'vendorName',
       'quantity',
       'unitValue',
@@ -268,7 +269,7 @@ export default function DataImport() {
           <br />
           <small>
             Columns are auto-detected. Required: name. Optional: description, quantity,
-            unitValue, vendorName, vendorPartNumber, productModelNumber, vendorUrl,
+            unitValue, vendorName, partNumber, modelNumber, vendorUrl,
             category, location, barcode, reorderPoint.
           </small>
         </Alert>
