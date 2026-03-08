@@ -1,6 +1,6 @@
 // SQL Schema definitions for RIMS database
 
-export const SCHEMA_VERSION = 2;
+export const SCHEMA_VERSION = 3;
 
 export const CREATE_TABLES_SQL = `
 -- App metadata for tracking initialization and schema version
@@ -107,7 +107,17 @@ CREATE TABLE IF NOT EXISTS vendor_price_cache (
   last_checked TEXT NOT NULL
 );
 
+-- Categories table
+CREATE TABLE IF NOT EXISTS categories (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL UNIQUE,
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
 -- Create indexes for better query performance
+CREATE INDEX IF NOT EXISTS idx_categories_sort_order ON categories(sort_order);
 CREATE INDEX IF NOT EXISTS idx_items_category ON items(category);
 CREATE INDEX IF NOT EXISTS idx_items_barcode ON items(barcode);
 CREATE INDEX IF NOT EXISTS idx_stock_history_item_id ON stock_history(item_id);
@@ -118,6 +128,7 @@ CREATE INDEX IF NOT EXISTS idx_item_templates_category ON item_templates(categor
 `;
 
 export const DROP_TABLES_SQL = `
+DROP TABLE IF EXISTS categories;
 DROP TABLE IF EXISTS vendor_price_cache;
 DROP TABLE IF EXISTS boms;
 DROP TABLE IF EXISTS item_templates;

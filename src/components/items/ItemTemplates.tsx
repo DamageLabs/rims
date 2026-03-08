@@ -2,8 +2,8 @@ import { useState, useEffect, FormEvent, ChangeEvent } from 'react';
 import { Card, Table, Button, Modal, Form, Row, Col, Badge } from 'react-bootstrap';
 import { FaPlus, FaEdit, FaTrash } from 'react-icons/fa';
 import * as itemTemplateService from '../../services/itemTemplateService';
+import * as categoryService from '../../services/categoryService';
 import { ItemTemplate, ItemTemplateFormData } from '../../types/ItemTemplate';
-import { CATEGORIES } from '../../types/Item';
 import { useAlert } from '../../contexts/AlertContext';
 import ConfirmModal from '../common/ConfirmModal';
 
@@ -14,9 +14,11 @@ export default function ItemTemplates() {
   const [deleteTarget, setDeleteTarget] = useState<ItemTemplate | null>(null);
   const { showSuccess, showError } = useAlert();
 
+  const [categories, setCategories] = useState<string[]>([]);
+
   const [formData, setFormData] = useState<ItemTemplateFormData>({
     name: '',
-    category: CATEGORIES[0],
+    category: '',
     defaultFields: {
       vendorName: '',
       vendorUrl: '',
@@ -28,6 +30,11 @@ export default function ItemTemplates() {
 
   useEffect(() => {
     loadTemplates();
+    const cats = categoryService.getCategoryNames();
+    setCategories(cats);
+    if (cats.length > 0) {
+      setFormData((prev) => ({ ...prev, category: prev.category || cats[0] }));
+    }
   }, []);
 
   const loadTemplates = () => {
@@ -37,7 +44,7 @@ export default function ItemTemplates() {
   const resetForm = () => {
     setFormData({
       name: '',
-      category: CATEGORIES[0],
+      category: categories[0] || '',
       defaultFields: {
         vendorName: '',
         vendorUrl: '',
@@ -212,7 +219,7 @@ export default function ItemTemplates() {
                   value={formData.category}
                   onChange={handleChange}
                 >
-                  {CATEGORIES.map((cat) => (
+                  {categories.map((cat) => (
                     <option key={cat} value={cat}>{cat}</option>
                   ))}
                 </Form.Select>

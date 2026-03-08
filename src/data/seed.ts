@@ -1,8 +1,9 @@
 import { User } from '../types/User';
 import { Item } from '../types/Item';
+import { DEFAULT_CATEGORIES } from '../types/Item';
 import { initializeDatabase, isDatabaseInitialized } from '../services/db/db';
 import { hasExistingLocalStorageData, migrateFromLocalStorage, verifyMigration } from '../services/db/migration';
-import { userRepository, itemRepository } from '../services/db/repositories';
+import { userRepository, itemRepository, categoryRepository } from '../services/db/repositories';
 
 const seedUsers: Omit<User, 'id'>[] = [
   {
@@ -626,6 +627,21 @@ export async function initializeData(): Promise<void> {
   // Seed items
   for (const itemData of seedItems) {
     itemRepository.create(itemData);
+  }
+
+  // Seed categories
+  const existingCategories = categoryRepository.count();
+  if (existingCategories === 0) {
+    const now = new Date().toISOString();
+    DEFAULT_CATEGORIES.forEach((name, index) => {
+      categoryRepository.create({
+        name,
+        sortOrder: index,
+        createdAt: now,
+        updatedAt: now,
+      });
+    });
+    console.log(`Seeded ${DEFAULT_CATEGORIES.length} categories`);
   }
 
   console.log('Database seeded successfully');

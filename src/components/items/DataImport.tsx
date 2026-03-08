@@ -4,7 +4,8 @@ import { Card, Form, Button, Table, Alert, Row, Col, Badge } from 'react-bootstr
 import { FaFileUpload, FaCheck, FaTimes, FaDownload } from 'react-icons/fa';
 import Papa from 'papaparse';
 import * as itemService from '../../services/itemService';
-import { ItemFormData, CATEGORIES } from '../../types/Item';
+import * as categoryService from '../../services/categoryService';
+import { ItemFormData } from '../../types/Item';
 import { useAlert } from '../../contexts/AlertContext';
 
 interface ImportRow {
@@ -72,6 +73,8 @@ export default function DataImport() {
   const [fileName, setFileName] = useState<string>('');
   const [importing, setImporting] = useState(false);
 
+  const categories = categoryService.getCategoryNames();
+
   const validateRow = (row: Partial<ImportRow>): ImportRow => {
     const errors: string[] = [];
 
@@ -89,8 +92,8 @@ export default function DataImport() {
       errors.push('Unit value must be >= 0');
     }
 
-    const category = row.category || CATEGORIES[0];
-    if (!CATEGORIES.includes(category as typeof CATEGORIES[number])) {
+    const category = row.category || categories[0] || '';
+    if (category && !categories.includes(category)) {
       errors.push(`Invalid category: ${category}`);
     }
 
@@ -103,9 +106,9 @@ export default function DataImport() {
       quantity: Math.max(0, quantity),
       unitValue: Math.max(0, unitValue),
       vendorUrl: String(row.vendorUrl || '').trim(),
-      category: CATEGORIES.includes(category as typeof CATEGORIES[number])
+      category: categories.includes(category)
         ? category
-        : CATEGORIES[0],
+        : categories[0] || '',
       location: String(row.location || '').trim(),
       barcode: String(row.barcode || '').trim(),
       reorderPoint: Math.max(0, Number(row.reorderPoint) || 0),
@@ -229,7 +232,7 @@ export default function DataImport() {
       '10',
       '9.99',
       'https://example.com',
-      CATEGORIES[0],
+      categories[0] || '',
       'A1B2',
       'RIMS-0001',
       '5',

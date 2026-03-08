@@ -5,3 +5,4 @@ export { costHistoryRepository, CostHistoryRepository } from './CostHistoryRepos
 export { bomRepository, BOMRepository } from './BOMRepository';
 export { itemTemplateRepository, ItemTemplateRepository } from './ItemTemplateRepository';
 export { vendorPriceCacheRepository, VendorPriceCacheRepository } from './VendorPriceCacheRepository';
+export { categoryRepository, CategoryRepository } from './CategoryRepository';

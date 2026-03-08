@@ -4,7 +4,8 @@ import { Card, Form, Button, Row, Col, ButtonGroup, Spinner, Badge } from 'react
 import * as itemService from '../../services/itemService';
 import * as itemTemplateService from '../../services/itemTemplateService';
 import * as vendorService from '../../services/vendorService';
-import { ItemFormData, CATEGORIES } from '../../types/Item';
+import { ItemFormData } from '../../types/Item';
+import * as categoryService from '../../services/categoryService';
 import { ItemTemplate } from '../../types/ItemTemplate';
 import { useAlert } from '../../contexts/AlertContext';
 import { compressImage, formatBytes, compressionPercent } from '../../utils/imageOptimizer';
@@ -30,12 +31,13 @@ export default function ItemForm() {
     unitValue: 0,
     picture: null,
     vendorUrl: '',
-    category: CATEGORIES[0],
+    category: '',
     location: '',
     barcode: initialBarcode,
     reorderPoint: 0,
   });
 
+  const [categories, setCategories] = useState<string[]>([]);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [imageCompression, setImageCompression] = useState<{
     originalSize: number;
@@ -45,6 +47,14 @@ export default function ItemForm() {
   const [isCompressing, setIsCompressing] = useState(false);
   const [templates, setTemplates] = useState<ItemTemplate[]>([]);
   const [isLookingUpPrice, setIsLookingUpPrice] = useState(false);
+
+  useEffect(() => {
+    const cats = categoryService.getCategoryNames();
+    setCategories(cats);
+    if (!isEditing && cats.length > 0) {
+      setFormData((prev) => ({ ...prev, category: prev.category || cats[0] }));
+    }
+  }, [isEditing]);
 
   useEffect(() => {
     if (id) {
@@ -262,7 +272,7 @@ export default function ItemForm() {
                   value={formData.category}
                   onChange={handleChange}
                 >
-                  {CATEGORIES.map((cat) => (
+                  {categories.map((cat) => (
                     <option key={cat} value={cat}>
                       {cat}
                     </option>

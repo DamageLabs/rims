@@ -135,6 +135,11 @@ async function runMigrations(database: Database): Promise<void> {
       console.log('Migration to v2: Added email verification columns');
     }
 
+    // Migration: v2 → v3: Seed categories table from existing item categories
+    if (currentVersion < 3) {
+      migrateToV3Categories(database);
+    }
+
     // Update schema version
     database.run(
       'INSERT OR REPLACE INTO app_metadata (key, value) VALUES (?, ?)',
@@ -277,6 +282,62 @@ export function getLastInsertRowId(): number {
     return result[0].values[0][0] as number;
   }
   return 0;
+}
+
+/**
+ * Migrate to schema v2: Seed the categories table.
+ * Collects distinct categories already used on items and adds default categories,
+ * preserving any data already in the database.
+ */
+function migrateToV3Categories(database: Database): void {
+  const DEFAULT_CATEGORIES = [
+    'Arduino',
+    'Raspberry Pi',
+    'BeagleBone',
+    'Prototyping',
+    'Kits & Projects',
+    'Boards',
+    'LCDs & Displays',
+    'LEDs',
+    'Power',
+    'Cables',
+    'Tools',
+    'Robotics',
+    'CNC',
+    'Components & Parts',
+    'Sensors',
+    '3D Printing',
+    'Wireless',
+  ];
+
+  // Gather categories already in use on items
+  const existingResult = database.exec(
+    "SELECT DISTINCT category FROM items WHERE category != ''"
+  );
+  const usedCategories: string[] = [];
+  if (existingResult.length > 0) {
+    for (const row of existingResult[0].values) {
+      usedCategories.push(row[0] as string);
+    }
+  }
+
+  // Merge: defaults first, then any item categories not already in the list
+  const allCategories = [...DEFAULT_CATEGORIES];
+  for (const cat of usedCategories) {
+    if (!allCategories.includes(cat)) {
+      allCategories.push(cat);
+    }
+  }
+
+  const now = new Date().toISOString();
+  for (let i = 0; i < allCategories.length; i++) {
+    database.run(
+      'INSERT OR IGNORE INTO categories (name, sort_order, created_at, updated_at) VALUES (?, ?, ?, ?)',
+      [allCategories[i], i, now, now]
+    );
+  }
+
+  console.log(`Migrated to v2: seeded ${allCategories.length} categories`);
 }
 
 /**
