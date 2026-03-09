@@ -5,42 +5,31 @@ import { FaFileUpload, FaCheck, FaTimes, FaDownload } from 'react-icons/fa';
 import Papa from 'papaparse';
 import * as itemService from '../../services/itemService';
 import * as categoryService from '../../services/categoryService';
+import * as inventoryTypeService from '../../services/inventoryTypeService';
 import { ItemFormData } from '../../types/Item';
+import { InventoryType } from '../../types/InventoryType';
 import { useAlert } from '../../contexts/AlertContext';
 
 interface ImportRow {
   name: string;
   description: string;
-  modelNumber: string;
-  partNumber: string;
-  vendorName: string;
   quantity: number;
   unitValue: number;
-  vendorUrl: string;
   category: string;
   location: string;
   barcode: string;
   reorderPoint: number;
+  customFields: Record<string, unknown>;
   valid: boolean;
   errors: string[];
 }
 
-const COLUMN_MAPPINGS: Record<string, keyof ImportRow> = {
+const COLUMN_MAPPINGS: Record<string, string> = {
   name: 'name',
   item: 'name',
   'item name': 'name',
   description: 'description',
   desc: 'description',
-  'product model number': 'modelNumber',
-  'model number': 'modelNumber',
-  modelnumber: 'modelNumber',
-  model: 'modelNumber',
-  'vendor part number': 'partNumber',
-  'part number': 'partNumber',
-  partnumber: 'partNumber',
-  'vendor name': 'vendorName',
-  vendor: 'vendorName',
-  supplier: 'vendorName',
   quantity: 'quantity',
   qty: 'quantity',
   stock: 'quantity',
@@ -48,12 +37,8 @@ const COLUMN_MAPPINGS: Record<string, keyof ImportRow> = {
   'unit price': 'unitValue',
   price: 'unitValue',
   cost: 'unitValue',
-  'vendor url': 'vendorUrl',
-  url: 'vendorUrl',
-  link: 'vendorUrl',
   category: 'category',
   cat: 'category',
-  type: 'category',
   location: 'location',
   loc: 'location',
   bin: 'location',
@@ -63,6 +48,20 @@ const COLUMN_MAPPINGS: Record<string, keyof ImportRow> = {
   'reorder point': 'reorderPoint',
   reorderpoint: 'reorderPoint',
   'reorder level': 'reorderPoint',
+  // Legacy mappings go to customFields
+  'product model number': 'cf:modelNumber',
+  'model number': 'cf:modelNumber',
+  modelnumber: 'cf:modelNumber',
+  model: 'cf:modelNumber',
+  'vendor part number': 'cf:partNumber',
+  'part number': 'cf:partNumber',
+  partnumber: 'cf:partNumber',
+  'vendor name': 'cf:vendorName',
+  vendor: 'cf:vendorName',
+  supplier: 'cf:vendorName',
+  'vendor url': 'cf:vendorUrl',
+  url: 'cf:vendorUrl',
+  link: 'cf:vendorUrl',
 };
 
 export default function DataImport() {
@@ -73,13 +72,19 @@ export default function DataImport() {
   const [importData, setImportData] = useState<ImportRow[]>([]);
   const [fileName, setFileName] = useState<string>('');
   const [importing, setImporting] = useState(false);
+  const [selectedTypeId, setSelectedTypeId] = useState<number>(1);
+  const [inventoryTypes, setInventoryTypes] = useState<InventoryType[]>([]);
 
-  const categories = categoryService.getCategoryNames();
+  useState(() => {
+    setInventoryTypes(inventoryTypeService.getAllTypes());
+  });
+
+  const categories = categoryService.getCategoryNamesByType(selectedTypeId);
 
   const validateRow = (row: Partial<ImportRow>): ImportRow => {
     const errors: string[] = [];
 
-    if (!row.name || row.name.trim() === '') {
+    if (!row.name || String(row.name).trim() === '') {
       errors.push('Name is required');
     }
 
@@ -93,26 +98,21 @@ export default function DataImport() {
       errors.push('Unit value must be >= 0');
     }
 
-    const category = row.category || categories[0] || '';
-    if (category && !categories.includes(category)) {
+    const category = String(row.category || categories[0] || '');
+    if (category && categories.length > 0 && !categories.includes(category)) {
       errors.push(`Invalid category: ${category}`);
     }
 
     return {
       name: String(row.name || '').trim(),
       description: String(row.description || '').trim(),
-      modelNumber: String(row.modelNumber || '').trim(),
-      partNumber: String(row.partNumber || '').trim(),
-      vendorName: String(row.vendorName || '').trim(),
       quantity: Math.max(0, quantity),
       unitValue: Math.max(0, unitValue),
-      vendorUrl: String(row.vendorUrl || '').trim(),
-      category: categories.includes(category)
-        ? category
-        : categories[0] || '',
+      category: categories.includes(category) ? category : categories[0] || '',
       location: String(row.location || '').trim(),
       barcode: String(row.barcode || '').trim(),
       reorderPoint: Math.max(0, Number(row.reorderPoint) || 0),
+      customFields: row.customFields || {},
       valid: errors.length === 0,
       errors,
     };
@@ -137,14 +137,23 @@ export default function DataImport() {
 
         const mappedData = jsonData.map((row) => {
           const mappedRow: Partial<ImportRow> = {};
+          const customFields: Record<string, unknown> = {};
 
           Object.entries(row).forEach(([key, value]) => {
             const normalizedKey = key.toLowerCase().trim();
             const mappedField = COLUMN_MAPPINGS[normalizedKey];
             if (mappedField) {
-              (mappedRow as Record<string, unknown>)[mappedField] = value;
+              if (mappedField.startsWith('cf:')) {
+                customFields[mappedField.slice(3)] = value;
+              } else {
+                (mappedRow as Record<string, unknown>)[mappedField] = value;
+              }
+            } else {
+              // Unmapped columns go to customFields
+              customFields[key] = value;
             }
           });
+          mappedRow.customFields = customFields;
 
           return validateRow(mappedRow);
         });
@@ -182,17 +191,15 @@ export default function DataImport() {
         const itemData: ItemFormData = {
           name: row.name,
           description: row.description,
-          modelNumber: row.modelNumber,
-          partNumber: row.partNumber,
-          vendorName: row.vendorName,
           quantity: row.quantity,
           unitValue: row.unitValue,
           picture: null,
-          vendorUrl: row.vendorUrl,
           category: row.category,
           location: row.location,
           barcode: row.barcode,
           reorderPoint: row.reorderPoint,
+          inventoryTypeId: selectedTypeId,
+          customFields: row.customFields,
         };
 
         itemService.createItem(itemData);
@@ -209,34 +216,31 @@ export default function DataImport() {
   };
 
   const downloadTemplate = () => {
+    const currentType = inventoryTypes.find((t) => t.id === selectedTypeId);
+    const customFieldHeaders = currentType?.schema.map((f) => f.key) || [];
     const headers = [
       'name',
       'description',
-      'modelNumber',
-      'partNumber',
-      'vendorName',
       'quantity',
       'unitValue',
-      'vendorUrl',
       'category',
       'location',
       'barcode',
       'reorderPoint',
+      ...customFieldHeaders,
     ];
 
+    const customFieldExamples = currentType?.schema.map((f) => f.placeholder || '') || [];
     const exampleRow = [
       'Example Item',
       'Item description',
-      'MODEL-001',
-      'VP-001',
-      'Vendor Name',
       '10',
       '9.99',
-      'https://example.com',
       categories[0] || '',
       'A1B2',
       'RIMS-0001',
       '5',
+      ...customFieldExamples,
     ];
 
     const csv = Papa.unparse({
@@ -269,20 +273,33 @@ export default function DataImport() {
           <br />
           <small>
             Columns are auto-detected. Required: name. Optional: description, quantity,
-            unitValue, vendorName, partNumber, modelNumber, vendorUrl,
-            category, location, barcode, reorderPoint.
+            unitValue, category, location, barcode, reorderPoint.
+            Type-specific fields (e.g., vendorName, modelNumber) are mapped to custom fields.
           </small>
         </Alert>
 
-        <Form.Group className="mb-4">
-          <Form.Label>Select File</Form.Label>
-          <Form.Control
-            ref={fileInputRef}
-            type="file"
-            accept=".csv"
-            onChange={handleFileChange}
-          />
-        </Form.Group>
+        <Row className="mb-4 g-3">
+          <Col md={4}>
+            <Form.Label>Inventory Type</Form.Label>
+            <Form.Select
+              value={selectedTypeId}
+              onChange={(e) => setSelectedTypeId(parseInt(e.target.value))}
+            >
+              {inventoryTypes.map((type) => (
+                <option key={type.id} value={type.id}>{type.name}</option>
+              ))}
+            </Form.Select>
+          </Col>
+          <Col md={8}>
+            <Form.Label>Select File</Form.Label>
+            <Form.Control
+              ref={fileInputRef}
+              type="file"
+              accept=".csv"
+              onChange={handleFileChange}
+            />
+          </Col>
+        </Row>
 
         {importData.length > 0 && (
           <>

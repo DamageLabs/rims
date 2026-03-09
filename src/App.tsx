@@ -28,6 +28,7 @@ import BOMDetail from './components/bom/BOMDetail';
 import VerifyEmail from './pages/VerifyEmail';
 import ResendVerification from './components/auth/ResendVerification';
 import CategoryManager from './components/settings/CategoryManager';
+import InventoryTypeManager from './components/settings/InventoryTypeManager';
 
 import 'bootstrap/dist/css/bootstrap.min.css';
 import './index.css';
@@ -162,6 +163,14 @@ function App() {
                   element={
                     <ProtectedRoute requireAdmin>
                       <CategoryManager />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="settings/inventory-types"
+                  element={
+                    <ProtectedRoute requireAdmin>
+                      <InventoryTypeManager />
                     </ProtectedRoute>
                   }
                 />

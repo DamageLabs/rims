@@ -3,12 +3,14 @@ import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { Card, Form, Button, Row, Col, ButtonGroup, Spinner, Badge } from 'react-bootstrap';
 import * as itemService from '../../services/itemService';
 import * as itemTemplateService from '../../services/itemTemplateService';
-import * as vendorService from '../../services/vendorService';
-import { ItemFormData } from '../../types/Item';
 import * as categoryService from '../../services/categoryService';
+import * as inventoryTypeService from '../../services/inventoryTypeService';
+import { ItemFormData } from '../../types/Item';
+import { InventoryType } from '../../types/InventoryType';
 import { ItemTemplate } from '../../types/ItemTemplate';
 import { useAlert } from '../../contexts/AlertContext';
 import { compressImage, formatBytes, compressionPercent } from '../../utils/imageOptimizer';
+import CustomFieldRenderer from './CustomFieldRenderer';
 import Breadcrumbs from '../common/Breadcrumbs';
 
 export default function ItemForm() {
@@ -18,25 +20,23 @@ export default function ItemForm() {
   const { showSuccess, showError } = useAlert();
   const isEditing = !!id;
 
-  // Get barcode from URL query param (from barcode scanner)
   const initialBarcode = searchParams.get('barcode') || '';
 
   const [formData, setFormData] = useState<ItemFormData>({
     name: '',
     description: '',
-    modelNumber: '',
-    partNumber: '',
-    vendorName: '',
     quantity: 0,
     unitValue: 0,
     picture: null,
-    vendorUrl: '',
     category: '',
     location: '',
     barcode: initialBarcode,
     reorderPoint: 0,
+    inventoryTypeId: 1,
+    customFields: {},
   });
 
+  const [inventoryTypes, setInventoryTypes] = useState<InventoryType[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [imageCompression, setImageCompression] = useState<{
@@ -46,15 +46,22 @@ export default function ItemForm() {
   } | null>(null);
   const [isCompressing, setIsCompressing] = useState(false);
   const [templates, setTemplates] = useState<ItemTemplate[]>([]);
-  const [isLookingUpPrice, setIsLookingUpPrice] = useState(false);
 
+  // Load inventory types
   useEffect(() => {
-    const cats = categoryService.getCategoryNames();
-    setCategories(cats);
-    if (!isEditing && cats.length > 0) {
-      setFormData((prev) => ({ ...prev, category: prev.category || cats[0] }));
+    setInventoryTypes(inventoryTypeService.getAllTypes());
+  }, []);
+
+  // Load categories when type changes
+  useEffect(() => {
+    if (formData.inventoryTypeId) {
+      const cats = categoryService.getCategoryNamesByType(formData.inventoryTypeId);
+      setCategories(cats);
+      if (!isEditing && cats.length > 0 && !cats.includes(formData.category)) {
+        setFormData((prev) => ({ ...prev, category: cats[0] }));
+      }
     }
-  }, [isEditing]);
+  }, [formData.inventoryTypeId, isEditing]);
 
   useEffect(() => {
     if (id) {
@@ -63,17 +70,15 @@ export default function ItemForm() {
         setFormData({
           name: item.name,
           description: item.description,
-          modelNumber: item.modelNumber,
-          partNumber: item.partNumber,
-          vendorName: item.vendorName,
           quantity: item.quantity,
           unitValue: item.unitValue,
           picture: item.picture,
-          vendorUrl: item.vendorUrl,
           category: item.category,
           location: item.location,
           barcode: item.barcode,
           reorderPoint: item.reorderPoint,
+          inventoryTypeId: item.inventoryTypeId,
+          customFields: item.customFields || {},
         });
         if (item.picture) {
           setPreviewImage(item.picture);
@@ -86,7 +91,6 @@ export default function ItemForm() {
   }, [id, navigate, showError]);
 
   useEffect(() => {
-    // Load templates for new item form
     if (!isEditing) {
       setTemplates(itemTemplateService.getAllTemplates());
     }
@@ -100,12 +104,27 @@ export default function ItemForm() {
     }));
   };
 
+  const handleTypeChange = (e: ChangeEvent<HTMLSelectElement>) => {
+    const typeId = parseInt(e.target.value);
+    setFormData((prev) => ({
+      ...prev,
+      inventoryTypeId: typeId,
+      customFields: {},
+    }));
+  };
+
+  const handleCustomFieldChange = (key: string, value: unknown) => {
+    setFormData((prev) => ({
+      ...prev,
+      customFields: { ...prev.customFields, [key]: value },
+    }));
+  };
+
   const handleImageChange = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       setIsCompressing(true);
       setImageCompression(null);
-
       const reader = new FileReader();
       reader.onloadend = async () => {
         const base64 = reader.result as string;
@@ -119,7 +138,6 @@ export default function ItemForm() {
             wasCompressed: result.wasCompressed,
           });
         } catch {
-          // Fallback to original if compression fails
           setFormData((prev) => ({ ...prev, picture: base64 }));
           setPreviewImage(base64);
         } finally {
@@ -139,7 +157,6 @@ export default function ItemForm() {
   const handleTemplateSelect = (e: ChangeEvent<HTMLSelectElement>) => {
     const templateId = e.target.value;
     if (!templateId) return;
-
     const template = itemTemplateService.getTemplateById(parseInt(templateId));
     if (template) {
       setFormData((prev) => ({
@@ -151,35 +168,8 @@ export default function ItemForm() {
     }
   };
 
-  const handleVendorLookup = async () => {
-    if (!formData.vendorName || !formData.partNumber) {
-      showError('Please enter vendor name and part number first.');
-      return;
-    }
-
-    setIsLookingUpPrice(true);
-    try {
-      const result = await vendorService.lookupPrice(formData.vendorName, formData.partNumber);
-      if (result) {
-        setFormData((prev) => ({
-          ...prev,
-          unitValue: result.price,
-          vendorUrl: result.vendorUrl || prev.vendorUrl,
-        }));
-        showSuccess(`Found price: $${result.price.toFixed(2)} (${result.inStock ? 'In Stock' : 'Out of Stock'})`);
-      } else {
-        showError('No pricing found for this part.');
-      }
-    } catch {
-      showError('Failed to look up vendor price.');
-    } finally {
-      setIsLookingUpPrice(false);
-    }
-  };
-
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
-
     try {
       if (isEditing) {
         const updatedItem = itemService.updateItem(parseInt(id!), formData);
@@ -198,6 +188,8 @@ export default function ItemForm() {
       showError(error instanceof Error ? error.message : 'Operation failed.');
     }
   };
+
+  const currentType = inventoryTypes.find((t) => t.id === formData.inventoryTypeId);
 
   const breadcrumbItems = isEditing
     ? [
@@ -239,6 +231,21 @@ export default function ItemForm() {
           <fieldset className="mb-4">
             <legend className="h6 text-muted border-bottom pb-2 mb-3">Basic Information</legend>
             <Row className="mb-3">
+              <Form.Label column sm={3}>Inventory Type</Form.Label>
+              <Col sm={5}>
+                <Form.Select
+                  name="inventoryTypeId"
+                  value={formData.inventoryTypeId}
+                  onChange={handleTypeChange}
+                >
+                  {inventoryTypes.map((type) => (
+                    <option key={type.id} value={type.id}>{type.name}</option>
+                  ))}
+                </Form.Select>
+              </Col>
+            </Row>
+
+            <Row className="mb-3">
               <Form.Label column sm={3}>Name <span className="text-danger">*</span></Form.Label>
               <Col sm={5}>
                 <Form.Control
@@ -272,82 +279,23 @@ export default function ItemForm() {
                   value={formData.category}
                   onChange={handleChange}
                 >
+                  {categories.length === 0 && <option value="">No categories</option>}
                   {categories.map((cat) => (
-                    <option key={cat} value={cat}>
-                      {cat}
-                    </option>
+                    <option key={cat} value={cat}>{cat}</option>
                   ))}
                 </Form.Select>
               </Col>
             </Row>
-
-            <Row className="mb-3">
-              <Form.Label column sm={3}>Model Number</Form.Label>
-              <Col sm={5}>
-                <Form.Control
-                  type="text"
-                  name="modelNumber"
-                  value={formData.modelNumber}
-                  onChange={handleChange}
-                />
-              </Col>
-            </Row>
           </fieldset>
 
-          {/* Vendor Information Section */}
-          <fieldset className="mb-4">
-            <legend className="h6 text-muted border-bottom pb-2 mb-3">Vendor Information</legend>
-            <Row className="mb-3">
-              <Form.Label column sm={3}>Vendor Name</Form.Label>
-              <Col sm={5}>
-                <Form.Control
-                  type="text"
-                  name="vendorName"
-                  value={formData.vendorName}
-                  onChange={handleChange}
-                />
-              </Col>
-            </Row>
-
-            <Row className="mb-3">
-              <Form.Label column sm={3}>Part Number</Form.Label>
-              <Col sm={5}>
-                <div className="d-flex gap-2">
-                  <Form.Control
-                    type="text"
-                    name="partNumber"
-                    value={formData.partNumber}
-                    onChange={handleChange}
-                  />
-                  <Button
-                    variant="outline-secondary"
-                    onClick={handleVendorLookup}
-                    disabled={isLookingUpPrice || !formData.vendorName || !formData.partNumber}
-                    title="Look up price from vendor"
-                    aria-label="Look up vendor price"
-                  >
-                    {isLookingUpPrice ? <Spinner size="sm" animation="border" /> : 'Lookup'}
-                  </Button>
-                </div>
-                <Form.Text className="text-muted">
-                  Enter vendor name and part number, then click Lookup to check pricing
-                </Form.Text>
-              </Col>
-            </Row>
-
-            <Row className="mb-3">
-              <Form.Label column sm={3}>Vendor URL</Form.Label>
-              <Col sm={5}>
-                <Form.Control
-                  type="url"
-                  name="vendorUrl"
-                  value={formData.vendorUrl}
-                  onChange={handleChange}
-                  placeholder="https://..."
-                />
-              </Col>
-            </Row>
-          </fieldset>
+          {/* Dynamic Custom Fields */}
+          {currentType && currentType.schema.length > 0 && (
+            <CustomFieldRenderer
+              schema={currentType.schema}
+              values={formData.customFields}
+              onChange={handleCustomFieldChange}
+            />
+          )}
 
           {/* Inventory Details Section */}
           <fieldset className="mb-4">

@@ -29,16 +29,12 @@ interface FilterConfig {
 
 const ALL_COLUMNS: ColumnConfig[] = [
   { key: 'name', label: 'Name', visible: true, sortable: true, type: 'string' },
-  { key: 'modelNumber', label: 'Model #', visible: true, sortable: true, type: 'string' },
-  { key: 'partNumber', label: 'Part #', visible: false, sortable: true, type: 'string' },
-  { key: 'vendorName', label: 'Vendor', visible: true, sortable: true, type: 'string' },
   { key: 'quantity', label: 'Quantity', visible: true, sortable: true, type: 'number' },
   { key: 'unitValue', label: 'Unit Value', visible: true, sortable: true, type: 'currency' },
   { key: 'value', label: 'Total Value', visible: true, sortable: true, type: 'currency' },
   { key: 'category', label: 'Category', visible: true, sortable: true, type: 'string' },
   { key: 'location', label: 'Location', visible: true, sortable: true, type: 'string' },
   { key: 'description', label: 'Description', visible: false, sortable: false, type: 'string' },
-  { key: 'vendorUrl', label: 'Vendor URL', visible: false, sortable: false, type: 'string' },
   { key: 'createdAt', label: 'Created', visible: false, sortable: true, type: 'date' },
   { key: 'updatedAt', label: 'Updated', visible: false, sortable: true, type: 'date' },
 ];
@@ -47,7 +43,6 @@ const FILTER_FIELDS: { key: keyof Item; label: string; type: 'string' | 'number'
   { key: 'name', label: 'Name', type: 'string' },
   { key: 'category', label: 'Category', type: 'select' },
   { key: 'location', label: 'Location', type: 'string' },
-  { key: 'vendorName', label: 'Vendor', type: 'string' },
   { key: 'quantity', label: 'Quantity', type: 'number' },
   { key: 'unitValue', label: 'Unit Value', type: 'number' },
   { key: 'value', label: 'Total Value', type: 'number' },
@@ -273,7 +268,6 @@ export default function CustomReport() {
                 <option value="">No Grouping</option>
                 <option value="category">Category</option>
                 <option value="location">Location</option>
-                <option value="vendorName">Vendor</option>
               </Form.Select>
             </Card.Body>
           </Card>

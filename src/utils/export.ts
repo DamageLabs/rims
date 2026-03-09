@@ -5,19 +5,27 @@ import { formatCurrency } from './formatters';
 import { APP_NAME } from '../constants/config';
 
 export function exportToCSV(items: Item[]): void {
+  // Collect all unique custom field keys across items
+  const customFieldKeys = new Set<string>();
+  for (const item of items) {
+    if (item.customFields) {
+      for (const key of Object.keys(item.customFields)) {
+        customFieldKeys.add(key);
+      }
+    }
+  }
+  const cfKeys = Array.from(customFieldKeys);
+
   const headers = [
     'ID',
     'Name',
     'Description',
-    'Model Number',
-    'Part Number',
-    'Vendor Name',
     'Quantity',
     'Unit Value',
     'Total Value',
     'Category',
     'Location',
-    'Vendor URL',
+    ...cfKeys,
     'Created At',
     'Updated At',
   ];
@@ -26,15 +34,12 @@ export function exportToCSV(items: Item[]): void {
     item.id,
     item.name,
     item.description,
-    item.modelNumber,
-    item.partNumber,
-    item.vendorName,
     item.quantity,
     item.unitValue,
     item.value,
     item.category,
     item.location,
-    item.vendorUrl,
+    ...cfKeys.map((key) => item.customFields?.[key] ?? ''),
     item.createdAt,
     item.updatedAt,
   ]);
@@ -44,7 +49,6 @@ export function exportToCSV(items: Item[]): void {
     ...rows.map((row) =>
       row.map((cell) => {
         const str = String(cell ?? '');
-        // Escape quotes and wrap in quotes if contains comma, quote, or newline
         if (str.includes(',') || str.includes('"') || str.includes('\n')) {
           return `"${str.replace(/"/g, '""')}"`;
         }
@@ -59,34 +63,28 @@ export function exportToCSV(items: Item[]): void {
 export function exportToPDF(items: Item[]): void {
   const doc = new jsPDF('landscape');
 
-  // Title
   doc.setFontSize(18);
   doc.text(`${APP_NAME} Inventory Report`, 14, 22);
 
-  // Date
   doc.setFontSize(10);
   doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 30);
 
-  // Summary
   const totalQuantity = items.reduce((sum, item) => sum + item.quantity, 0);
   const totalValue = items.reduce((sum, item) => sum + item.value, 0);
   doc.text(`Total Items: ${items.length} | Total Quantity: ${totalQuantity} | Total Value: ${formatCurrency(totalValue)}`, 14, 36);
 
-  // Table
   const tableData = items.map((item) => [
     item.name,
-    item.modelNumber,
     item.quantity.toString(),
     formatCurrency(item.unitValue),
     formatCurrency(item.value),
-    item.vendorName,
     item.location,
     item.category,
   ]);
 
   autoTable(doc, {
     startY: 42,
-    head: [['Name', 'Model #', 'Qty', 'Unit Value', 'Total Value', 'Vendor', 'Location', 'Category']],
+    head: [['Name', 'Qty', 'Unit Value', 'Total Value', 'Location', 'Category']],
     body: tableData,
     styles: { fontSize: 8 },
     headStyles: { fillColor: [66, 139, 202] },

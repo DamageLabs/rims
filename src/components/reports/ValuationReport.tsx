@@ -48,7 +48,7 @@ export default function ValuationReport() {
           key = item.location || 'Unassigned';
           break;
         case 'vendor':
-          key = item.vendorName || 'Unknown Vendor';
+          key = (item.customFields?.vendorName as string) || 'Unknown Vendor';
           break;
         default:
           key = 'All';
@@ -106,7 +106,7 @@ export default function ValuationReport() {
         rows.push([
           group.name,
           item.name,
-          item.modelNumber,
+          (item.customFields?.modelNumber as string || ''),
           item.quantity.toString(),
           item.unitValue.toFixed(2),
           item.value.toFixed(2),
@@ -313,7 +313,7 @@ export default function ValuationReport() {
                       <td>
                         <Link to={`/items/${item.id}`}>{item.name}</Link>
                       </td>
-                      <td>{item.modelNumber}</td>
+                      <td>{(item.customFields?.modelNumber as string || '')}</td>
                       <td className="text-end">{item.quantity}</td>
                       <td className="text-end">{formatCurrency(item.unitValue)}</td>
                       <td className="text-end">{formatCurrency(item.value)}</td>

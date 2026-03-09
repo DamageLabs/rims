@@ -3,7 +3,9 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Card, Row, Col, Button, ButtonGroup, Spinner, Badge } from 'react-bootstrap';
 import * as itemService from '../../services/itemService';
 import * as vendorService from '../../services/vendorService';
+import * as inventoryTypeService from '../../services/inventoryTypeService';
 import { Item } from '../../types/Item';
+import { InventoryType } from '../../types/InventoryType';
 import { VendorPriceResult } from '../../types/Vendor';
 import { useAlert } from '../../contexts/AlertContext';
 import ConfirmModal from '../common/ConfirmModal';
@@ -16,6 +18,7 @@ export default function ItemDetail() {
   const navigate = useNavigate();
   const { showSuccess, showError } = useAlert();
   const [item, setItem] = useState<Item | null>(null);
+  const [inventoryType, setInventoryType] = useState<InventoryType | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [vendorPrices, setVendorPrices] = useState<VendorPriceResult[]>([]);
   const [isLoadingPrices, setIsLoadingPrices] = useState(false);
@@ -25,6 +28,8 @@ export default function ItemDetail() {
       const foundItem = itemService.getItemById(parseInt(id));
       if (foundItem) {
         setItem(foundItem);
+        const type = inventoryTypeService.getTypeById(foundItem.inventoryTypeId);
+        setInventoryType(type);
       } else {
         showError('Item not found.');
         navigate('/items');
@@ -50,11 +55,12 @@ export default function ItemDetail() {
   };
 
   const handleCompareVendorPrices = async () => {
-    if (!item?.partNumber) return;
+    const partNumber = item?.customFields?.partNumber as string;
+    if (!partNumber) return;
 
     setIsLoadingPrices(true);
     try {
-      const prices = await vendorService.compareVendorPrices(item.partNumber);
+      const prices = await vendorService.compareVendorPrices(partNumber);
       setVendorPrices(prices);
     } catch {
       showError('Failed to fetch vendor prices.');
@@ -93,6 +99,13 @@ export default function ItemDetail() {
           </Row>
         )}
 
+        {inventoryType && (
+          <Row className="mb-2">
+            <Col md={3} className="text-muted">Inventory Type</Col>
+            <Col md={9}><Badge bg="primary">{inventoryType.name}</Badge></Col>
+          </Row>
+        )}
+
         <Row className="mb-2">
           <Col md={3} className="text-muted">Description</Col>
           <Col md={9}>
@@ -100,31 +113,26 @@ export default function ItemDetail() {
           </Col>
         </Row>
 
-        <Row className="mb-2">
-          <Col md={3} className="text-muted">Model Number</Col>
-          <Col md={9}>{item.modelNumber}</Col>
-        </Row>
-
-        <Row className="mb-2">
-          <Col md={3} className="text-muted">Vendor Name</Col>
-          <Col md={9}>{item.vendorName}</Col>
-        </Row>
-
-        <Row className="mb-2">
-          <Col md={3} className="text-muted">Part Number</Col>
-          <Col md={9}>{item.partNumber}</Col>
-        </Row>
-
-        <Row className="mb-2">
-          <Col md={3} className="text-muted">Vendor URL</Col>
-          <Col md={9}>
-            {item.vendorUrl && (
-              <a href={item.vendorUrl} target="_blank" rel="noopener noreferrer">
-                {item.vendorUrl}
-              </a>
-            )}
-          </Col>
-        </Row>
+        {/* Dynamic custom fields from inventory type schema */}
+        {inventoryType && inventoryType.schema.length > 0 && item.customFields && (
+          <>
+            {inventoryType.schema.map((field) => {
+              const value = item.customFields[field.key];
+              if (value === undefined || value === null || value === '') return null;
+              return (
+                <Row className="mb-2" key={field.key}>
+                  <Col md={3} className="text-muted">{field.label}</Col>
+                  <Col md={9}>
+                    {field.type === 'boolean' ? (value ? 'Yes' : 'No') :
+                     field.key === 'vendorUrl' || (typeof value === 'string' && value.startsWith('http')) ? (
+                       <a href={String(value)} target="_blank" rel="noopener noreferrer">{String(value)}</a>
+                     ) : String(value)}
+                  </Col>
+                </Row>
+              );
+            })}
+          </>
+        )}
 
         <Row className="mb-2">
           <Col md={3} className="text-muted">Quantity</Col>
@@ -176,7 +184,7 @@ export default function ItemDetail() {
         <CostHistoryChart itemId={item.id} currentValue={item.unitValue} />
 
         {/* Vendor Price Comparison */}
-        {item.partNumber && (
+        {!!(item.customFields?.partNumber) && (
           <Card className="mt-3">
             <Card.Header className="d-flex justify-content-between align-items-center">
               <h6 className="mb-0">Vendor Price Comparison</h6>

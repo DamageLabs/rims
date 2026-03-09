@@ -2,37 +2,53 @@ import { useState, useEffect, FormEvent } from 'react';
 import { Card, Table, Button, Modal, Form, Row, Col, Badge } from 'react-bootstrap';
 import { FaPlus, FaEdit, FaTrash, FaArrowUp, FaArrowDown } from 'react-icons/fa';
 import * as categoryService from '../../services/categoryService';
+import * as inventoryTypeService from '../../services/inventoryTypeService';
 import { Category } from '../../types/Category';
+import { InventoryType } from '../../types/InventoryType';
 import { useAlert } from '../../contexts/AlertContext';
 import ConfirmModal from '../common/ConfirmModal';
 import Breadcrumbs from '../common/Breadcrumbs';
 
 export default function CategoryManager() {
   const [categories, setCategories] = useState<Category[]>([]);
+  const [inventoryTypes, setInventoryTypes] = useState<InventoryType[]>([]);
+  const [filterTypeId, setFilterTypeId] = useState<string>('');
   const [itemCounts, setItemCounts] = useState<Map<string, number>>(new Map());
   const [showModal, setShowModal] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Category | null>(null);
   const [name, setName] = useState('');
+  const [modalTypeId, setModalTypeId] = useState<number>(1);
   const { showSuccess, showError } = useAlert();
 
   useEffect(() => {
+    setInventoryTypes(inventoryTypeService.getAllTypes());
     loadCategories();
   }, []);
 
   const loadCategories = () => {
-    setCategories(categoryService.getAllCategories());
+    if (filterTypeId) {
+      setCategories(categoryService.getCategoriesByType(parseInt(filterTypeId)));
+    } else {
+      setCategories(categoryService.getAllCategories());
+    }
     const counts = categoryService.getCategoryItemCounts();
     setItemCounts(new Map(counts.map((c) => [c.name, c.count])));
   };
+
+  useEffect(() => {
+    loadCategories();
+  }, [filterTypeId]);
 
   const handleOpenModal = (category?: Category) => {
     if (category) {
       setEditingCategory(category);
       setName(category.name);
+      setModalTypeId(category.inventoryTypeId);
     } else {
       setEditingCategory(null);
       setName('');
+      setModalTypeId(filterTypeId ? parseInt(filterTypeId) : inventoryTypes[0]?.id || 1);
     }
     setShowModal(true);
   };
@@ -51,7 +67,7 @@ export default function CategoryManager() {
         categoryService.updateCategory(editingCategory.id, { name });
         showSuccess(`Category updated to "${name}".`);
       } else {
-        categoryService.createCategory({ name, sortOrder: categories.length });
+        categoryService.createCategory({ name, sortOrder: categories.length, inventoryTypeId: modalTypeId });
         showSuccess(`Category "${name}" created.`);
       }
       handleCloseModal();
@@ -108,9 +124,22 @@ export default function CategoryManager() {
           </Button>
         </Card.Header>
         <Card.Body>
-          <p className="text-muted">
-            Add, edit, reorder, or remove inventory categories. Categories in use by items cannot be deleted.
-          </p>
+          <Row className="mb-3 g-2 align-items-end">
+            <Col md={4}>
+              <Form.Label>Filter by Inventory Type</Form.Label>
+              <Form.Select value={filterTypeId} onChange={(e) => setFilterTypeId(e.target.value)}>
+                <option value="">All Types</option>
+                {inventoryTypes.map((t) => (
+                  <option key={t.id} value={t.id}>{t.name}</option>
+                ))}
+              </Form.Select>
+            </Col>
+            <Col>
+              <p className="text-muted mb-0">
+                Categories are scoped to inventory types. Categories in use cannot be deleted.
+              </p>
+            </Col>
+          </Row>
 
           {categories.length === 0 ? (
             <p className="text-center py-4 text-muted">
@@ -122,6 +151,7 @@ export default function CategoryManager() {
                 <tr>
                   <th style={{ width: '60px' }}>Order</th>
                   <th>Name</th>
+                  <th>Type</th>
                   <th style={{ width: '120px' }}>Items</th>
                   <th style={{ width: '160px' }}>Actions</th>
                 </tr>
@@ -156,6 +186,9 @@ export default function CategoryManager() {
                         </div>
                       </td>
                       <td className="align-middle">{category.name}</td>
+                      <td className="align-middle">
+                        <small>{inventoryTypes.find((t) => t.id === category.inventoryTypeId)?.name || '-'}</small>
+                      </td>
                       <td className="align-middle">
                         <Badge bg={count > 0 ? 'primary' : 'secondary'}>{count}</Badge>
                       </td>
@@ -196,6 +229,20 @@ export default function CategoryManager() {
         </Modal.Header>
         <Form onSubmit={handleSubmit}>
           <Modal.Body>
+            <Row className="mb-3">
+              <Form.Label column sm={3}>Type</Form.Label>
+              <Col sm={9}>
+                <Form.Select
+                  value={modalTypeId}
+                  onChange={(e) => setModalTypeId(parseInt(e.target.value))}
+                  disabled={!!editingCategory}
+                >
+                  {inventoryTypes.map((t) => (
+                    <option key={t.id} value={t.id}>{t.name}</option>
+                  ))}
+                </Form.Select>
+              </Col>
+            </Row>
             <Row className="mb-3">
               <Form.Label column sm={3}>Name</Form.Label>
               <Col sm={9}>

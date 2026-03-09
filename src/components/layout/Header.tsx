@@ -87,6 +87,9 @@ export default function Header() {
                 <NavDropdown.Item as={Link} to="/settings/categories">
                   Categories
                 </NavDropdown.Item>
+                <NavDropdown.Item as={Link} to="/settings/inventory-types">
+                  Inventory Types
+                </NavDropdown.Item>
               </NavDropdown>
             )}
           </Nav>

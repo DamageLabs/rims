@@ -3,7 +3,9 @@ import { Link } from 'react-router-dom';
 import { Card, Table, Button, Form, ButtonGroup } from 'react-bootstrap';
 import { FaEdit, FaTrash, FaFileExcel, FaFilePdf, FaBoxOpen } from 'react-icons/fa';
 import * as itemService from '../../services/itemService';
+import * as inventoryTypeService from '../../services/inventoryTypeService';
 import { Item } from '../../types/Item';
+import { InventoryType } from '../../types/InventoryType';
 import { useAlert } from '../../contexts/AlertContext';
 import Pagination from '../common/Pagination';
 import ConfirmModal from '../common/ConfirmModal';
@@ -15,7 +17,7 @@ import { exportToCSV, exportToPDF } from '../../utils/export';
 import { formatCurrency } from '../../utils/formatters';
 import { ITEMS_PER_PAGE, LOW_STOCK_THRESHOLD } from '../../constants/config';
 
-type SortField = 'name' | 'modelNumber' | 'quantity' | 'unitValue' | 'value' | 'vendorName' | 'location' | 'category';
+type SortField = 'name' | 'quantity' | 'unitValue' | 'value' | 'location' | 'category';
 type SortDirection = 'asc' | 'desc';
 
 interface SortHeaderProps {
@@ -58,9 +60,16 @@ export default function ItemList() {
   // Bulk selection state
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
 
+  const [inventoryTypes, setInventoryTypes] = useState<InventoryType[]>([]);
+  const [typeFilter, setTypeFilter] = useState('');
+
   const loadItems = useCallback(() => {
     const allItems = itemService.getAllItems();
     setItems(allItems);
+  }, []);
+
+  useEffect(() => {
+    setInventoryTypes(inventoryTypeService.getAllTypes());
   }, []);
 
   useEffect(() => {
@@ -93,14 +102,18 @@ export default function ItemList() {
       // Search filter
       if (searchTerm) {
         const search = searchTerm.toLowerCase();
+        const customFieldValues = Object.values(item.customFields || {}).map((v) => String(v || '').toLowerCase());
         const matchesSearch =
           item.name.toLowerCase().includes(search) ||
           item.description.toLowerCase().includes(search) ||
-          item.vendorName.toLowerCase().includes(search) ||
           item.location.toLowerCase().includes(search) ||
-          item.modelNumber.toLowerCase().includes(search) ||
-          item.partNumber.toLowerCase().includes(search);
+          customFieldValues.some((v) => v.includes(search));
         if (!matchesSearch) return false;
+      }
+
+      // Type filter
+      if (typeFilter && item.inventoryTypeId !== parseInt(typeFilter)) {
+        return false;
       }
 
       // Category filter
@@ -115,7 +128,7 @@ export default function ItemList() {
 
       return true;
     });
-  }, [items, searchTerm, categoryFilter, showLowStockOnly]);
+  }, [items, searchTerm, typeFilter, categoryFilter, showLowStockOnly]);
 
   const sortedItems = useMemo(() => {
     return [...filteredItems].sort((a, b) => {
@@ -224,6 +237,7 @@ export default function ItemList() {
   const handleResetFilters = () => {
     setSearchTerm('');
     setCategoryFilter('');
+    setTypeFilter('');
     setShowLowStockOnly(false);
     setCurrentPage(1);
     setSelectedIds(new Set());
@@ -270,6 +284,8 @@ export default function ItemList() {
           onSearchChange={handleSearchChange}
           categoryFilter={categoryFilter}
           onCategoryChange={handleCategoryChange}
+          typeFilter={typeFilter}
+          onTypeChange={(v) => { setTypeFilter(v); resetFiltersState(); }}
           onReset={handleResetFilters}
         />
 
@@ -305,11 +321,10 @@ export default function ItemList() {
                 />
               </th>
               <SortHeader field="name" currentField={sortField} direction={sortDirection} onSort={handleSort}>Item Name</SortHeader>
-              <SortHeader field="modelNumber" currentField={sortField} direction={sortDirection} onSort={handleSort}>Model #</SortHeader>
+              <th className="text-center">Type</th>
               <SortHeader field="quantity" currentField={sortField} direction={sortDirection} onSort={handleSort}>Quantity</SortHeader>
               <SortHeader field="unitValue" currentField={sortField} direction={sortDirection} onSort={handleSort}>Unit Value</SortHeader>
               <SortHeader field="value" currentField={sortField} direction={sortDirection} onSort={handleSort}>Total Value</SortHeader>
-              <SortHeader field="vendorName" currentField={sortField} direction={sortDirection} onSort={handleSort}>Vendor</SortHeader>
               <SortHeader field="location" currentField={sortField} direction={sortDirection} onSort={handleSort}>Location</SortHeader>
               <SortHeader field="category" currentField={sortField} direction={sortDirection} onSort={handleSort}>Category</SortHeader>
               <th className="text-center">Actions</th>
@@ -329,13 +344,14 @@ export default function ItemList() {
                 <td>
                   <Link to={`/items/${item.id}`}>{item.name}</Link>
                 </td>
-                <td className="text-center">{item.modelNumber}</td>
+                <td className="text-center">
+                  <small>{inventoryTypes.find((t) => t.id === item.inventoryTypeId)?.name || '-'}</small>
+                </td>
                 <td className={`text-center ${item.quantity === 0 ? 'text-danger fw-bold' : item.quantity <= LOW_STOCK_THRESHOLD ? 'text-warning fw-bold' : ''}`}>
                   {item.quantity}
                 </td>
                 <td className="text-center">{formatCurrency(item.unitValue)}</td>
                 <td className="text-center">{formatCurrency(item.value)}</td>
-                <td className="text-center">{item.vendorName}</td>
                 <td className="text-center">{item.location}</td>
                 <td className="text-center">{item.category}</td>
                 <td className="text-center">
@@ -365,7 +381,7 @@ export default function ItemList() {
               <td className="text-center"><strong>{totalQuantity}</strong></td>
               <td className="text-center"></td>
               <td className="text-center"><strong>{formatCurrency(totalValue)}</strong></td>
-              <td colSpan={4}></td>
+              <td colSpan={3}></td>
             </tr>
           </tfoot>
         </Table>

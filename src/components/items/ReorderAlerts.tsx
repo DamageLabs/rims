@@ -52,7 +52,7 @@ export default function ReorderAlerts() {
   }, [itemsNeedingReorder]);
 
   const vendors = useMemo(() => {
-    const vends = new Set(itemsNeedingReorder.map((item) => item.vendorName).filter(Boolean));
+    const vends = new Set(itemsNeedingReorder.map((item) => (item.customFields?.vendorName as string || '')).filter(Boolean));
     return Array.from(vends).sort();
   }, [itemsNeedingReorder]);
 
@@ -64,7 +64,7 @@ export default function ReorderAlerts() {
     }
 
     if (vendorFilter) {
-      filtered = filtered.filter((item) => item.vendorName === vendorFilter);
+      filtered = filtered.filter((item) => (item.customFields?.vendorName as string || '') === vendorFilter);
     }
 
     filtered.sort((a, b) => {
@@ -93,8 +93,8 @@ export default function ReorderAlerts() {
           bVal = b.category.toLowerCase();
           break;
         case 'vendor':
-          aVal = a.vendorName.toLowerCase();
-          bVal = b.vendorName.toLowerCase();
+          aVal = ((a.customFields?.vendorName as string) || '').toLowerCase();
+          bVal = ((b.customFields?.vendorName as string) || '').toLowerCase();
           break;
         default:
           return 0;
@@ -248,7 +248,7 @@ export default function ReorderAlerts() {
                           <small className="text-muted">{item.location || 'No location'}</small>
                         </td>
                         <td>{item.category}</td>
-                        <td>{item.vendorName || '-'}</td>
+                        <td>{(item.customFields?.vendorName as string || '') || '-'}</td>
                         <td>
                           <strong className={item.quantity === 0 ? 'text-danger' : ''}>
                             {item.quantity}
@@ -268,9 +268,9 @@ export default function ReorderAlerts() {
                             >
                               <FaShoppingCart />
                             </Link>
-                            {item.vendorUrl && (
+                            {(item.customFields?.vendorUrl as string) && (
                               <a
-                                href={item.vendorUrl}
+                                href={(item.customFields?.vendorUrl as string)}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="btn btn-sm btn-outline-secondary"
@@ -313,13 +313,13 @@ export default function ReorderAlerts() {
                 <tbody>
                   {vendors.map((vendor) => {
                     const vendorItems = itemsNeedingReorder.filter(
-                      (item) => item.vendorName === vendor
+                      (item) => (item.customFields?.vendorName as string || '') === vendor
                     );
                     const estimatedCost = vendorItems.reduce(
                       (sum, item) => sum + (item.reorderPoint - item.quantity) * item.unitValue,
                       0
                     );
-                    const vendorUrl = vendorItems.find((i) => i.vendorUrl)?.vendorUrl;
+                    const vendorUrl = vendorItems.find((i) => i.customFields?.vendorUrl)?.customFields?.vendorUrl as string;
 
                     return (
                       <tr key={vendor}>
