@@ -2,8 +2,8 @@ export interface Item {
   id: number;
   name: string;
   description: string;
-  productModelNumber: string;
-  vendorPartNumber: string;
+  modelNumber: string;
+  partNumber: string;
   vendorName: string;
   quantity: number;
   unitValue: number;
@@ -20,7 +20,11 @@ export interface Item {
 
 export type ItemFormData = Omit<Item, 'id' | 'value' | 'createdAt' | 'updatedAt'>;
 
-export const CATEGORIES = [
+/**
+ * @deprecated Use categoryService.getCategoryNames() for dynamic categories from the database.
+ * This constant is retained only for seed/migration purposes.
+ */
+export const DEFAULT_CATEGORIES = [
   'Arduino',
   'Raspberry Pi',
   'BeagleBone',

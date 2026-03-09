@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ButtonGroup, Button, Dropdown } from 'react-bootstrap';
 import { FaTrash, FaFolderOpen } from 'react-icons/fa';
-import { CATEGORIES } from '../../types/Item';
+import * as categoryService from '../../services/categoryService';
 
 interface BulkActionsProps {
   selectedCount: number;
@@ -15,6 +15,11 @@ export default function BulkActions({
   onCategoryChange,
 }: BulkActionsProps) {
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
+  const [categories, setCategories] = useState<string[]>([]);
+
+  useEffect(() => {
+    setCategories(categoryService.getCategoryNames());
+  }, []);
 
   if (selectedCount === 0) {
     return null;
@@ -39,7 +44,7 @@ export default function BulkActions({
             Change Category
           </Dropdown.Toggle>
           <Dropdown.Menu style={{ maxHeight: '300px', overflowY: 'auto' }}>
-            {CATEGORIES.map((category) => (
+            {categories.map((category) => (
               <Dropdown.Item
                 key={category}
                 onClick={() => {

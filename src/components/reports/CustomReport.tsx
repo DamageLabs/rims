@@ -2,7 +2,8 @@ import { useState, useMemo } from 'react';
 import { Card, Table, Row, Col, Form, Button, ButtonGroup, Badge } from 'react-bootstrap';
 import { FaFileExcel, FaFilePdf, FaPlus, FaTimes, FaArrowUp, FaArrowDown } from 'react-icons/fa';
 import * as itemService from '../../services/itemService';
-import { Item, CATEGORIES } from '../../types/Item';
+import * as categoryService from '../../services/categoryService';
+import { Item } from '../../types/Item';
 import { formatCurrency } from '../../utils/formatters';
 import { exportToCSV, exportToPDF } from '../../utils/export';
 import Pagination from '../common/Pagination';
@@ -28,8 +29,8 @@ interface FilterConfig {
 
 const ALL_COLUMNS: ColumnConfig[] = [
   { key: 'name', label: 'Name', visible: true, sortable: true, type: 'string' },
-  { key: 'productModelNumber', label: 'Model #', visible: true, sortable: true, type: 'string' },
-  { key: 'vendorPartNumber', label: 'Part #', visible: false, sortable: true, type: 'string' },
+  { key: 'modelNumber', label: 'Model #', visible: true, sortable: true, type: 'string' },
+  { key: 'partNumber', label: 'Part #', visible: false, sortable: true, type: 'string' },
   { key: 'vendorName', label: 'Vendor', visible: true, sortable: true, type: 'string' },
   { key: 'quantity', label: 'Quantity', visible: true, sortable: true, type: 'number' },
   { key: 'unitValue', label: 'Unit Value', visible: true, sortable: true, type: 'currency' },
@@ -54,6 +55,7 @@ const FILTER_FIELDS: { key: keyof Item; label: string; type: 'string' | 'number'
 
 export default function CustomReport() {
   const allItems = itemService.getAllItems();
+  const categories = categoryService.getCategoryNames();
 
   const [columns, setColumns] = useState<ColumnConfig[]>(ALL_COLUMNS);
   const [filters, setFilters] = useState<FilterConfig[]>([]);
@@ -322,7 +324,7 @@ export default function CustomReport() {
                         onChange={(e) => updateFilter(filter.id, { value: e.target.value })}
                       >
                         <option value="">Select...</option>
-                        {CATEGORIES.map((cat) => (
+                        {categories.map((cat) => (
                           <option key={cat} value={cat}>{cat}</option>
                         ))}
                       </Form.Select>

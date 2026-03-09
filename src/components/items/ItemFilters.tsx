@@ -1,6 +1,7 @@
+import { useState, useEffect } from 'react';
 import { Form, Row, Col, Button, InputGroup } from 'react-bootstrap';
 import { FaSearch, FaTimes } from 'react-icons/fa';
-import { CATEGORIES } from '../../types/Item';
+import * as categoryService from '../../services/categoryService';
 
 interface ItemFiltersProps {
   searchTerm: string;
@@ -17,7 +18,12 @@ export default function ItemFilters({
   onCategoryChange,
   onReset,
 }: ItemFiltersProps) {
+  const [categories, setCategories] = useState<string[]>([]);
   const hasFilters = searchTerm || categoryFilter;
+
+  useEffect(() => {
+    setCategories(categoryService.getCategoryNames());
+  }, []);
 
   return (
     <Row className="mb-3 g-2">
@@ -40,7 +46,7 @@ export default function ItemFilters({
           onChange={(e) => onCategoryChange(e.target.value)}
         >
           <option value="">All Categories</option>
-          {CATEGORIES.map((category) => (
+          {categories.map((category) => (
             <option key={category} value={category}>
               {category}
             </option>

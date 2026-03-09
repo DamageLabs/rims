@@ -1,8 +1,9 @@
 import { User } from '../types/User';
 import { Item } from '../types/Item';
+import { DEFAULT_CATEGORIES } from '../types/Item';
 import { initializeDatabase, isDatabaseInitialized } from '../services/db/db';
 import { hasExistingLocalStorageData, migrateFromLocalStorage, verifyMigration } from '../services/db/migration';
-import { userRepository, itemRepository } from '../services/db/repositories';
+import { userRepository, itemRepository, categoryRepository } from '../services/db/repositories';
 
 const seedUsers: Omit<User, 'id'>[] = [
   {
@@ -38,8 +39,8 @@ const seedItems: Omit<Item, 'id'>[] = [
   {
     name: 'Arduino Uno',
     description: 'The Arduino Uno is a microcontroller board based on the ATmega328.',
-    productModelNumber: 'R3',
-    vendorPartNumber: '50',
+    modelNumber: 'R3',
+    partNumber: '50',
     vendorName: 'Adafruit',
     quantity: 8,
     unitValue: 24.95,
@@ -56,8 +57,8 @@ const seedItems: Omit<Item, 'id'>[] = [
   {
     name: 'Arduino Mega 2560',
     description: 'The Arduino Mega 2560 is a microcontroller board based on the ATmega2560.',
-    productModelNumber: 'R3',
-    vendorPartNumber: '191',
+    modelNumber: 'R3',
+    partNumber: '191',
     vendorName: 'Adafruit',
     quantity: 1,
     unitValue: 45.95,
@@ -74,8 +75,8 @@ const seedItems: Omit<Item, 'id'>[] = [
   {
     name: 'Arduino Nano',
     description: 'Compact Arduino board with ATmega328P, ideal for breadboard projects.',
-    productModelNumber: 'V3',
-    vendorPartNumber: '1501',
+    modelNumber: 'V3',
+    partNumber: '1501',
     vendorName: 'SparkFun',
     quantity: 15,
     unitValue: 22.95,
@@ -93,8 +94,8 @@ const seedItems: Omit<Item, 'id'>[] = [
   {
     name: 'Raspberry Pi 4 Model B',
     description: 'Quad-core 64-bit ARM Cortex-A72 running at 1.5GHz with 4GB RAM.',
-    productModelNumber: '4B-4GB',
-    vendorPartNumber: '4292',
+    modelNumber: '4B-4GB',
+    partNumber: '4292',
     vendorName: 'Adafruit',
     quantity: 5,
     unitValue: 55.00,
@@ -111,8 +112,8 @@ const seedItems: Omit<Item, 'id'>[] = [
   {
     name: 'Raspberry Pi Zero 2 W',
     description: 'Compact single-board computer with wireless connectivity.',
-    productModelNumber: 'Zero2W',
-    vendorPartNumber: '5291',
+    modelNumber: 'Zero2W',
+    partNumber: '5291',
     vendorName: 'Adafruit',
     quantity: 10,
     unitValue: 15.00,
@@ -130,8 +131,8 @@ const seedItems: Omit<Item, 'id'>[] = [
   {
     name: 'DHT22 Temperature & Humidity Sensor',
     description: 'Digital temperature and humidity sensor with single-wire interface.',
-    productModelNumber: 'DHT22',
-    vendorPartNumber: '385',
+    modelNumber: 'DHT22',
+    partNumber: '385',
     vendorName: 'Adafruit',
     quantity: 25,
     unitValue: 9.95,
@@ -148,8 +149,8 @@ const seedItems: Omit<Item, 'id'>[] = [
   {
     name: 'HC-SR04 Ultrasonic Distance Sensor',
     description: 'Ultrasonic ranging module with 2cm to 400cm range.',
-    productModelNumber: 'HC-SR04',
-    vendorPartNumber: '3942',
+    modelNumber: 'HC-SR04',
+    partNumber: '3942',
     vendorName: 'Adafruit',
     quantity: 20,
     unitValue: 3.95,
@@ -166,8 +167,8 @@ const seedItems: Omit<Item, 'id'>[] = [
   {
     name: 'MPU-6050 Accelerometer & Gyroscope',
     description: '6-axis motion tracking device with I2C interface.',
-    productModelNumber: 'MPU-6050',
-    vendorPartNumber: 'SEN-11028',
+    modelNumber: 'MPU-6050',
+    partNumber: 'SEN-11028',
     vendorName: 'SparkFun',
     quantity: 12,
     unitValue: 14.95,
@@ -185,8 +186,8 @@ const seedItems: Omit<Item, 'id'>[] = [
   {
     name: '16x2 LCD Display with I2C',
     description: 'Blue backlight 16x2 character LCD with I2C interface module.',
-    productModelNumber: 'LCD1602-I2C',
-    vendorPartNumber: '181',
+    modelNumber: 'LCD1602-I2C',
+    partNumber: '181',
     vendorName: 'Adafruit',
     quantity: 18,
     unitValue: 12.95,
@@ -203,8 +204,8 @@ const seedItems: Omit<Item, 'id'>[] = [
   {
     name: '0.96" OLED Display 128x64',
     description: 'Small monochrome OLED display with I2C interface.',
-    productModelNumber: 'SSD1306',
-    vendorPartNumber: '326',
+    modelNumber: 'SSD1306',
+    partNumber: '326',
     vendorName: 'Adafruit',
     quantity: 30,
     unitValue: 7.95,
@@ -222,8 +223,8 @@ const seedItems: Omit<Item, 'id'>[] = [
   {
     name: 'NeoPixel Ring 16 RGB LED',
     description: 'Ring of 16 individually addressable RGB LEDs.',
-    productModelNumber: 'WS2812B-16',
-    vendorPartNumber: '1463',
+    modelNumber: 'WS2812B-16',
+    partNumber: '1463',
     vendorName: 'Adafruit',
     quantity: 8,
     unitValue: 9.95,
@@ -240,8 +241,8 @@ const seedItems: Omit<Item, 'id'>[] = [
   {
     name: 'LED Assortment Kit 5mm',
     description: '100 piece LED kit with red, green, yellow, blue, and white LEDs.',
-    productModelNumber: 'LED-5MM-KIT',
-    vendorPartNumber: 'COM-12062',
+    modelNumber: 'LED-5MM-KIT',
+    partNumber: 'COM-12062',
     vendorName: 'SparkFun',
     quantity: 5,
     unitValue: 8.95,
@@ -259,8 +260,8 @@ const seedItems: Omit<Item, 'id'>[] = [
   {
     name: 'Resistor Kit 1/4W',
     description: '500 piece resistor assortment from 10 ohm to 1M ohm.',
-    productModelNumber: 'RES-KIT-500',
-    vendorPartNumber: 'COM-10969',
+    modelNumber: 'RES-KIT-500',
+    partNumber: 'COM-10969',
     vendorName: 'SparkFun',
     quantity: 3,
     unitValue: 12.95,
@@ -277,8 +278,8 @@ const seedItems: Omit<Item, 'id'>[] = [
   {
     name: 'Ceramic Capacitor Kit',
     description: '300 piece ceramic capacitor assortment, various values.',
-    productModelNumber: 'CAP-KIT-300',
-    vendorPartNumber: 'COM-13698',
+    modelNumber: 'CAP-KIT-300',
+    partNumber: 'COM-13698',
     vendorName: 'SparkFun',
     quantity: 4,
     unitValue: 9.95,
@@ -295,8 +296,8 @@ const seedItems: Omit<Item, 'id'>[] = [
   {
     name: 'Electrolytic Capacitor Kit',
     description: '100 piece electrolytic capacitor assortment, 1uF to 1000uF.',
-    productModelNumber: 'ECAP-KIT-100',
-    vendorPartNumber: '2975',
+    modelNumber: 'ECAP-KIT-100',
+    partNumber: '2975',
     vendorName: 'Adafruit',
     quantity: 6,
     unitValue: 7.95,
@@ -314,8 +315,8 @@ const seedItems: Omit<Item, 'id'>[] = [
   {
     name: '5V 2.5A Power Supply',
     description: 'USB-C power supply for Raspberry Pi 4, 5V 2.5A output.',
-    productModelNumber: 'PS-5V-2.5A',
-    vendorPartNumber: '4298',
+    modelNumber: 'PS-5V-2.5A',
+    partNumber: '4298',
     vendorName: 'Adafruit',
     quantity: 10,
     unitValue: 8.95,
@@ -332,8 +333,8 @@ const seedItems: Omit<Item, 'id'>[] = [
   {
     name: '18650 Li-Ion Battery',
     description: 'Rechargeable 3.7V 2600mAh lithium-ion battery.',
-    productModelNumber: '18650-2600',
-    vendorPartNumber: '1781',
+    modelNumber: '18650-2600',
+    partNumber: '1781',
     vendorName: 'Adafruit',
     quantity: 20,
     unitValue: 9.95,
@@ -350,8 +351,8 @@ const seedItems: Omit<Item, 'id'>[] = [
   {
     name: 'LM7805 Voltage Regulator',
     description: '5V 1A linear voltage regulator IC.',
-    productModelNumber: 'LM7805',
-    vendorPartNumber: '2164',
+    modelNumber: 'LM7805',
+    partNumber: '2164',
     vendorName: 'Adafruit',
     quantity: 50,
     unitValue: 0.75,
@@ -369,8 +370,8 @@ const seedItems: Omit<Item, 'id'>[] = [
   {
     name: 'Full-Size Breadboard',
     description: '830 tie-point solderless breadboard.',
-    productModelNumber: 'BB-830',
-    vendorPartNumber: '239',
+    modelNumber: 'BB-830',
+    partNumber: '239',
     vendorName: 'Adafruit',
     quantity: 12,
     unitValue: 5.95,
@@ -387,8 +388,8 @@ const seedItems: Omit<Item, 'id'>[] = [
   {
     name: 'Jumper Wire Kit',
     description: '65 piece jumper wire kit for breadboarding.',
-    productModelNumber: 'JW-65',
-    vendorPartNumber: '153',
+    modelNumber: 'JW-65',
+    partNumber: '153',
     vendorName: 'Adafruit',
     quantity: 8,
     unitValue: 6.95,
@@ -405,8 +406,8 @@ const seedItems: Omit<Item, 'id'>[] = [
   {
     name: 'Perfboard 5x7cm',
     description: 'Double-sided prototype PCB board, 5x7cm.',
-    productModelNumber: 'PB-5x7',
-    vendorPartNumber: '2670',
+    modelNumber: 'PB-5x7',
+    partNumber: '2670',
     vendorName: 'Adafruit',
     quantity: 25,
     unitValue: 1.50,
@@ -424,8 +425,8 @@ const seedItems: Omit<Item, 'id'>[] = [
   {
     name: 'ESP32 Development Board',
     description: 'WiFi and Bluetooth enabled microcontroller development board.',
-    productModelNumber: 'ESP32-DEVKIT',
-    vendorPartNumber: '3405',
+    modelNumber: 'ESP32-DEVKIT',
+    partNumber: '3405',
     vendorName: 'Adafruit',
     quantity: 10,
     unitValue: 14.95,
@@ -442,8 +443,8 @@ const seedItems: Omit<Item, 'id'>[] = [
   {
     name: 'nRF24L01+ Wireless Module',
     description: '2.4GHz wireless transceiver module.',
-    productModelNumber: 'nRF24L01+',
-    vendorPartNumber: 'WRL-00691',
+    modelNumber: 'nRF24L01+',
+    partNumber: 'WRL-00691',
     vendorName: 'SparkFun',
     quantity: 15,
     unitValue: 6.95,
@@ -461,8 +462,8 @@ const seedItems: Omit<Item, 'id'>[] = [
   {
     name: 'Servo Motor SG90',
     description: 'Micro servo motor, 180 degree rotation, 9g weight.',
-    productModelNumber: 'SG90',
-    vendorPartNumber: '169',
+    modelNumber: 'SG90',
+    partNumber: '169',
     vendorName: 'Adafruit',
     quantity: 20,
     unitValue: 5.95,
@@ -479,8 +480,8 @@ const seedItems: Omit<Item, 'id'>[] = [
   {
     name: 'DC Motor with Gearbox',
     description: '6V DC motor with 48:1 gearbox, 200 RPM.',
-    productModelNumber: 'DCM-48',
-    vendorPartNumber: '3777',
+    modelNumber: 'DCM-48',
+    partNumber: '3777',
     vendorName: 'Adafruit',
     quantity: 8,
     unitValue: 3.50,
@@ -497,8 +498,8 @@ const seedItems: Omit<Item, 'id'>[] = [
   {
     name: 'L298N Motor Driver',
     description: 'Dual H-bridge motor driver module for DC motors.',
-    productModelNumber: 'L298N',
-    vendorPartNumber: 'ROB-14450',
+    modelNumber: 'L298N',
+    partNumber: 'ROB-14450',
     vendorName: 'SparkFun',
     quantity: 6,
     unitValue: 12.95,
@@ -516,8 +517,8 @@ const seedItems: Omit<Item, 'id'>[] = [
   {
     name: 'Soldering Iron 60W',
     description: 'Temperature adjustable soldering iron with stand.',
-    productModelNumber: 'SI-60W',
-    vendorPartNumber: '180',
+    modelNumber: 'SI-60W',
+    partNumber: '180',
     vendorName: 'Adafruit',
     quantity: 3,
     unitValue: 22.00,
@@ -534,8 +535,8 @@ const seedItems: Omit<Item, 'id'>[] = [
   {
     name: 'Digital Multimeter',
     description: 'Auto-ranging digital multimeter with LCD display.',
-    productModelNumber: 'DMM-AR',
-    vendorPartNumber: '2034',
+    modelNumber: 'DMM-AR',
+    partNumber: '2034',
     vendorName: 'Adafruit',
     quantity: 4,
     unitValue: 17.50,
@@ -553,8 +554,8 @@ const seedItems: Omit<Item, 'id'>[] = [
   {
     name: 'USB-C Cable 1m',
     description: 'USB-C to USB-A cable, 1 meter length.',
-    productModelNumber: 'USB-C-1M',
-    vendorPartNumber: '4474',
+    modelNumber: 'USB-C-1M',
+    partNumber: '4474',
     vendorName: 'Adafruit',
     quantity: 15,
     unitValue: 4.95,
@@ -571,8 +572,8 @@ const seedItems: Omit<Item, 'id'>[] = [
   {
     name: 'Micro USB Cable 1m',
     description: 'Micro USB to USB-A cable, 1 meter length.',
-    productModelNumber: 'MUSB-1M',
-    vendorPartNumber: '592',
+    modelNumber: 'MUSB-1M',
+    partNumber: '592',
     vendorName: 'Adafruit',
     quantity: 20,
     unitValue: 2.95,
@@ -626,6 +627,21 @@ export async function initializeData(): Promise<void> {
   // Seed items
   for (const itemData of seedItems) {
     itemRepository.create(itemData);
+  }
+
+  // Seed categories
+  const existingCategories = categoryRepository.count();
+  if (existingCategories === 0) {
+    const now = new Date().toISOString();
+    DEFAULT_CATEGORIES.forEach((name, index) => {
+      categoryRepository.create({
+        name,
+        sortOrder: index,
+        createdAt: now,
+        updatedAt: now,
+      });
+    });
+    console.log(`Seeded ${DEFAULT_CATEGORIES.length} categories`);
   }
 
   console.log('Database seeded successfully');

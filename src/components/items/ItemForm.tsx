@@ -4,7 +4,8 @@ import { Card, Form, Button, Row, Col, ButtonGroup, Spinner, Badge } from 'react
 import * as itemService from '../../services/itemService';
 import * as itemTemplateService from '../../services/itemTemplateService';
 import * as vendorService from '../../services/vendorService';
-import { ItemFormData, CATEGORIES } from '../../types/Item';
+import { ItemFormData } from '../../types/Item';
+import * as categoryService from '../../services/categoryService';
 import { ItemTemplate } from '../../types/ItemTemplate';
 import { useAlert } from '../../contexts/AlertContext';
 import { compressImage, formatBytes, compressionPercent } from '../../utils/imageOptimizer';
@@ -23,19 +24,20 @@ export default function ItemForm() {
   const [formData, setFormData] = useState<ItemFormData>({
     name: '',
     description: '',
-    productModelNumber: '',
-    vendorPartNumber: '',
+    modelNumber: '',
+    partNumber: '',
     vendorName: '',
     quantity: 0,
     unitValue: 0,
     picture: null,
     vendorUrl: '',
-    category: CATEGORIES[0],
+    category: '',
     location: '',
     barcode: initialBarcode,
     reorderPoint: 0,
   });
 
+  const [categories, setCategories] = useState<string[]>([]);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [imageCompression, setImageCompression] = useState<{
     originalSize: number;
@@ -47,14 +49,22 @@ export default function ItemForm() {
   const [isLookingUpPrice, setIsLookingUpPrice] = useState(false);
 
   useEffect(() => {
+    const cats = categoryService.getCategoryNames();
+    setCategories(cats);
+    if (!isEditing && cats.length > 0) {
+      setFormData((prev) => ({ ...prev, category: prev.category || cats[0] }));
+    }
+  }, [isEditing]);
+
+  useEffect(() => {
     if (id) {
       const item = itemService.getItemById(parseInt(id));
       if (item) {
         setFormData({
           name: item.name,
           description: item.description,
-          productModelNumber: item.productModelNumber,
-          vendorPartNumber: item.vendorPartNumber,
+          modelNumber: item.modelNumber,
+          partNumber: item.partNumber,
           vendorName: item.vendorName,
           quantity: item.quantity,
           unitValue: item.unitValue,
@@ -142,14 +152,14 @@ export default function ItemForm() {
   };
 
   const handleVendorLookup = async () => {
-    if (!formData.vendorName || !formData.vendorPartNumber) {
+    if (!formData.vendorName || !formData.partNumber) {
       showError('Please enter vendor name and part number first.');
       return;
     }
 
     setIsLookingUpPrice(true);
     try {
-      const result = await vendorService.lookupPrice(formData.vendorName, formData.vendorPartNumber);
+      const result = await vendorService.lookupPrice(formData.vendorName, formData.partNumber);
       if (result) {
         setFormData((prev) => ({
           ...prev,
@@ -262,7 +272,7 @@ export default function ItemForm() {
                   value={formData.category}
                   onChange={handleChange}
                 >
-                  {CATEGORIES.map((cat) => (
+                  {categories.map((cat) => (
                     <option key={cat} value={cat}>
                       {cat}
                     </option>
@@ -272,12 +282,12 @@ export default function ItemForm() {
             </Row>
 
             <Row className="mb-3">
-              <Form.Label column sm={3}>Product Model Number</Form.Label>
+              <Form.Label column sm={3}>Model Number</Form.Label>
               <Col sm={5}>
                 <Form.Control
                   type="text"
-                  name="productModelNumber"
-                  value={formData.productModelNumber}
+                  name="modelNumber"
+                  value={formData.modelNumber}
                   onChange={handleChange}
                 />
               </Col>
@@ -300,19 +310,19 @@ export default function ItemForm() {
             </Row>
 
             <Row className="mb-3">
-              <Form.Label column sm={3}>Vendor Part Number</Form.Label>
+              <Form.Label column sm={3}>Part Number</Form.Label>
               <Col sm={5}>
                 <div className="d-flex gap-2">
                   <Form.Control
                     type="text"
-                    name="vendorPartNumber"
-                    value={formData.vendorPartNumber}
+                    name="partNumber"
+                    value={formData.partNumber}
                     onChange={handleChange}
                   />
                   <Button
                     variant="outline-secondary"
                     onClick={handleVendorLookup}
-                    disabled={isLookingUpPrice || !formData.vendorName || !formData.vendorPartNumber}
+                    disabled={isLookingUpPrice || !formData.vendorName || !formData.partNumber}
                     title="Look up price from vendor"
                     aria-label="Look up vendor price"
                   >
@@ -320,7 +330,7 @@ export default function ItemForm() {
                   </Button>
                 </div>
                 <Form.Text className="text-muted">
-                  Enter vendor name and part number, then click Lookup for pricing
+                  Enter vendor name and part number, then click Lookup to check pricing
                 </Form.Text>
               </Col>
             </Row>

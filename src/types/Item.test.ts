@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import type { Item, ItemFormData } from './Item';
-import { CATEGORIES } from './Item';
+import { DEFAULT_CATEGORIES } from './Item';
 
 describe('Item types', () => {
   describe('Item interface', () => {
@@ -9,8 +9,8 @@ describe('Item types', () => {
         id: 1,
         name: 'Test Item',
         description: 'A test item description',
-        productModelNumber: 'TM-001',
-        vendorPartNumber: 'VP-001',
+        modelNumber: 'TM-001',
+        partNumber: 'VP-001',
         vendorName: 'Test Vendor',
         quantity: 10,
         unitValue: 5.99,
@@ -36,8 +36,8 @@ describe('Item types', () => {
         id: 1,
         name: 'Test Item',
         description: 'Description',
-        productModelNumber: 'TM-001',
-        vendorPartNumber: 'VP-001',
+        modelNumber: 'TM-001',
+        partNumber: 'VP-001',
         vendorName: 'Vendor',
         quantity: 5,
         unitValue: 10.0,
@@ -61,8 +61,8 @@ describe('Item types', () => {
       const formData: ItemFormData = {
         name: 'New Item',
         description: 'Description',
-        productModelNumber: 'NI-001',
-        vendorPartNumber: 'VP-001',
+        modelNumber: 'NI-001',
+        partNumber: 'VP-001',
         vendorName: 'Vendor',
         quantity: 1,
         unitValue: 9.99,
@@ -82,22 +82,22 @@ describe('Item types', () => {
     });
   });
 
-  describe('CATEGORIES constant', () => {
+  describe('DEFAULT_CATEGORIES constant', () => {
     it('contains expected categories', () => {
-      expect(CATEGORIES).toContain('Arduino');
-      expect(CATEGORIES).toContain('Raspberry Pi');
-      expect(CATEGORIES).toContain('Components & Parts');
-      expect(CATEGORIES).toContain('Sensors');
-      expect(CATEGORIES).toContain('3D Printing');
+      expect(DEFAULT_CATEGORIES).toContain('Arduino');
+      expect(DEFAULT_CATEGORIES).toContain('Raspberry Pi');
+      expect(DEFAULT_CATEGORIES).toContain('Components & Parts');
+      expect(DEFAULT_CATEGORIES).toContain('Sensors');
+      expect(DEFAULT_CATEGORIES).toContain('3D Printing');
     });
 
     it('has expected number of categories', () => {
-      expect(CATEGORIES.length).toBe(17);
+      expect(DEFAULT_CATEGORIES.length).toBe(17);
     });
 
     it('categories are unique', () => {
-      const uniqueCategories = new Set(CATEGORIES);
-      expect(uniqueCategories.size).toBe(CATEGORIES.length);
+      const uniqueCategories = new Set(DEFAULT_CATEGORIES);
+      expect(uniqueCategories.size).toBe(DEFAULT_CATEGORIES.length);
     });
   });
 });

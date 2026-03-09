@@ -106,14 +106,14 @@ export function migrateFromLocalStorage(): {
       try {
         const db = getDatabaseOrThrow();
         db.run(
-          `INSERT INTO items (id, name, description, product_model_number, vendor_part_number, vendor_name, quantity, unit_value, value, picture, vendor_url, category, location, barcode, reorder_point, created_at, updated_at)
+          `INSERT INTO items (id, name, description, model_number, part_number, vendor_name, quantity, unit_value, value, picture, vendor_url, category, location, barcode, reorder_point, created_at, updated_at)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
             item.id,
             item.name,
             item.description,
-            item.productModelNumber,
-            item.vendorPartNumber,
+            item.modelNumber,
+            item.partNumber,
             item.vendorName,
             item.quantity,
             item.unitValue,

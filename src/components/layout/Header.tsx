@@ -80,9 +80,14 @@ export default function Header() {
               </>
             )}
             {isAdmin && (
-              <Nav.Link as={Link} to="/users">
-                Users
-              </Nav.Link>
+              <NavDropdown title="Admin" id="admin-dropdown">
+                <NavDropdown.Item as={Link} to="/users">
+                  Users
+                </NavDropdown.Item>
+                <NavDropdown.Item as={Link} to="/settings/categories">
+                  Categories
+                </NavDropdown.Item>
+              </NavDropdown>
             )}
           </Nav>
           <Nav className="align-items-center">

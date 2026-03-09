@@ -4,14 +4,15 @@ import { Card, Form, Button, Table, Alert, Row, Col, Badge } from 'react-bootstr
 import { FaFileUpload, FaCheck, FaTimes, FaDownload } from 'react-icons/fa';
 import Papa from 'papaparse';
 import * as itemService from '../../services/itemService';
-import { ItemFormData, CATEGORIES } from '../../types/Item';
+import * as categoryService from '../../services/categoryService';
+import { ItemFormData } from '../../types/Item';
 import { useAlert } from '../../contexts/AlertContext';
 
 interface ImportRow {
   name: string;
   description: string;
-  productModelNumber: string;
-  vendorPartNumber: string;
+  modelNumber: string;
+  partNumber: string;
   vendorName: string;
   quantity: number;
   unitValue: number;
@@ -30,12 +31,13 @@ const COLUMN_MAPPINGS: Record<string, keyof ImportRow> = {
   'item name': 'name',
   description: 'description',
   desc: 'description',
-  'product model number': 'productModelNumber',
-  'model number': 'productModelNumber',
-  model: 'productModelNumber',
-  'vendor part number': 'vendorPartNumber',
-  'part number': 'vendorPartNumber',
-  partnumber: 'vendorPartNumber',
+  'product model number': 'modelNumber',
+  'model number': 'modelNumber',
+  modelnumber: 'modelNumber',
+  model: 'modelNumber',
+  'vendor part number': 'partNumber',
+  'part number': 'partNumber',
+  partnumber: 'partNumber',
   'vendor name': 'vendorName',
   vendor: 'vendorName',
   supplier: 'vendorName',
@@ -72,6 +74,8 @@ export default function DataImport() {
   const [fileName, setFileName] = useState<string>('');
   const [importing, setImporting] = useState(false);
 
+  const categories = categoryService.getCategoryNames();
+
   const validateRow = (row: Partial<ImportRow>): ImportRow => {
     const errors: string[] = [];
 
@@ -89,23 +93,23 @@ export default function DataImport() {
       errors.push('Unit value must be >= 0');
     }
 
-    const category = row.category || CATEGORIES[0];
-    if (!CATEGORIES.includes(category as typeof CATEGORIES[number])) {
+    const category = row.category || categories[0] || '';
+    if (category && !categories.includes(category)) {
       errors.push(`Invalid category: ${category}`);
     }
 
     return {
       name: String(row.name || '').trim(),
       description: String(row.description || '').trim(),
-      productModelNumber: String(row.productModelNumber || '').trim(),
-      vendorPartNumber: String(row.vendorPartNumber || '').trim(),
+      modelNumber: String(row.modelNumber || '').trim(),
+      partNumber: String(row.partNumber || '').trim(),
       vendorName: String(row.vendorName || '').trim(),
       quantity: Math.max(0, quantity),
       unitValue: Math.max(0, unitValue),
       vendorUrl: String(row.vendorUrl || '').trim(),
-      category: CATEGORIES.includes(category as typeof CATEGORIES[number])
+      category: categories.includes(category)
         ? category
-        : CATEGORIES[0],
+        : categories[0] || '',
       location: String(row.location || '').trim(),
       barcode: String(row.barcode || '').trim(),
       reorderPoint: Math.max(0, Number(row.reorderPoint) || 0),
@@ -178,8 +182,8 @@ export default function DataImport() {
         const itemData: ItemFormData = {
           name: row.name,
           description: row.description,
-          productModelNumber: row.productModelNumber,
-          vendorPartNumber: row.vendorPartNumber,
+          modelNumber: row.modelNumber,
+          partNumber: row.partNumber,
           vendorName: row.vendorName,
           quantity: row.quantity,
           unitValue: row.unitValue,
@@ -208,8 +212,8 @@ export default function DataImport() {
     const headers = [
       'name',
       'description',
-      'productModelNumber',
-      'vendorPartNumber',
+      'modelNumber',
+      'partNumber',
       'vendorName',
       'quantity',
       'unitValue',
@@ -229,7 +233,7 @@ export default function DataImport() {
       '10',
       '9.99',
       'https://example.com',
-      CATEGORIES[0],
+      categories[0] || '',
       'A1B2',
       'RIMS-0001',
       '5',
@@ -265,7 +269,7 @@ export default function DataImport() {
           <br />
           <small>
             Columns are auto-detected. Required: name. Optional: description, quantity,
-            unitValue, vendorName, vendorPartNumber, productModelNumber, vendorUrl,
+            unitValue, vendorName, partNumber, modelNumber, vendorUrl,
             category, location, barcode, reorderPoint.
           </small>
         </Alert>

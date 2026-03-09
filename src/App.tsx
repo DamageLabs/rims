@@ -27,6 +27,7 @@ import BOMForm from './components/bom/BOMForm';
 import BOMDetail from './components/bom/BOMDetail';
 import VerifyEmail from './pages/VerifyEmail';
 import ResendVerification from './components/auth/ResendVerification';
+import CategoryManager from './components/settings/CategoryManager';
 
 import 'bootstrap/dist/css/bootstrap.min.css';
 import './index.css';
@@ -153,6 +154,14 @@ function App() {
                   element={
                     <ProtectedRoute>
                       <BOMForm />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="settings/categories"
+                  element={
+                    <ProtectedRoute requireAdmin>
+                      <CategoryManager />
                     </ProtectedRoute>
                   }
                 />
