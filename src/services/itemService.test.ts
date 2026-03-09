@@ -47,18 +47,16 @@ const mockItem = {
   id: 1,
   name: 'Test Item',
   description: 'A test item',
-  modelNumber: 'TM-001',
-  partNumber: 'VP-001',
-  vendorName: 'Test Vendor',
   quantity: 10,
   unitValue: 5.99,
   value: 59.9,
   picture: null,
-  vendorUrl: 'https://vendor.com/item',
   category: 'Electronics',
   location: 'Shelf A1',
   barcode: '123456789',
   reorderPoint: 5,
+  inventoryTypeId: 1,
+  customFields: { modelNumber: 'TM-001', partNumber: 'VP-001', vendorName: 'Test Vendor' },
   createdAt: '2024-01-01T00:00:00Z',
   updatedAt: '2024-01-01T00:00:00Z',
 };
@@ -104,19 +102,17 @@ describe('itemService', () => {
       const formData = {
         name: 'New Item',
         description: 'Description',
-        modelNumber: 'TM-002',
-        partNumber: 'VP-002',
-        vendorName: 'Vendor',
         quantity: 5,
         unitValue: 10.0,
         picture: null,
-        vendorUrl: null,
         category: 'Hardware',
         location: 'Shelf B1',
         barcode: '',
-        reorderPoint: null,
+        reorderPoint: 0,
+        inventoryTypeId: 1,
+        customFields: { modelNumber: 'TM-002', vendorName: 'Vendor' },
       };
-      vi.mocked(itemRepository.createWithValue).mockReturnValue({ ...mockItem, ...formData, id: 2 });
+      vi.mocked(itemRepository.createWithValue).mockReturnValue({ ...mockItem, ...formData, id: 2, value: 50.0 });
 
       const result = createItem(formData);
 
