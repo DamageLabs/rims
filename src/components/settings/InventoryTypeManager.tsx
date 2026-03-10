@@ -1,12 +1,30 @@
 import { useState, useEffect } from 'react';
-import { Card, Table, Button, Form, Row, Col, Badge, Collapse } from 'react-bootstrap';
-import { FaPlus, FaTrash, FaEdit, FaChevronDown, FaChevronRight } from 'react-icons/fa';
+import { Card, Table, Button, ButtonGroup, Form, Row, Col, Badge, Collapse } from 'react-bootstrap';
+import { FaPlus, FaTrash, FaEdit, FaChevronDown, FaChevronRight, FaFileExcel, FaFileCode } from 'react-icons/fa';
 import * as inventoryTypeService from '../../services/inventoryTypeService';
 import { InventoryType, FieldDefinition } from '../../types/InventoryType';
 import { useAlert } from '../../contexts/AlertContext';
 import ConfirmModal from '../common/ConfirmModal';
 import FieldSchemaEditor from './FieldSchemaEditor';
 import Breadcrumbs from '../common/Breadcrumbs';
+import { APP_NAME } from '../../constants/config';
+
+function downloadFile(content: string, filename: string, mimeType: string): void {
+  const blob = new Blob([content], { type: mimeType });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
+function getDateStamp(): string {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+}
 
 export default function InventoryTypeManager() {
   const { showSuccess, showError } = useAlert();
@@ -76,6 +94,36 @@ export default function InventoryTypeManager() {
     setDeleteId(null);
   };
 
+  const exportJSON = () => {
+    const data = types.map(({ id, name, icon, schema }) => ({ id, name, icon, schema }));
+    const json = JSON.stringify(data, null, 2);
+    downloadFile(json, `${APP_NAME.toLowerCase()}-inventory-types-${getDateStamp()}.json`, 'application/json');
+  };
+
+  const exportCSV = () => {
+    const headers = ['ID', 'Name', 'Icon', 'Fields Count', 'Field Keys'];
+    const rows = types.map((type) => [
+      type.id,
+      type.name,
+      type.icon,
+      type.schema.length,
+      type.schema.map((f) => f.key).join('; '),
+    ]);
+    const csvContent = [
+      headers.join(','),
+      ...rows.map((row) =>
+        row.map((cell) => {
+          const str = String(cell ?? '');
+          if (str.includes(',') || str.includes('"') || str.includes('\n') || str.includes(';')) {
+            return `"${str.replace(/"/g, '""')}"`;
+          }
+          return str;
+        }).join(',')
+      ),
+    ].join('\n');
+    downloadFile(csvContent, `${APP_NAME.toLowerCase()}-inventory-types-${getDateStamp()}.csv`, 'text/csv');
+  };
+
   const breadcrumbItems = [
     { label: 'Settings' },
     { label: 'Inventory Types' },
@@ -86,7 +134,17 @@ export default function InventoryTypeManager() {
       <Breadcrumbs items={breadcrumbItems} />
       <Card>
         <Card.Header>
-          <h4 className="mb-0">Inventory Types</h4>
+          <div className="d-flex justify-content-between align-items-center">
+            <h4 className="mb-0">Inventory Types</h4>
+            <ButtonGroup size="sm">
+              <Button variant="outline-success" onClick={exportCSV} disabled={types.length === 0}>
+                <FaFileExcel className="me-1" /> CSV
+              </Button>
+              <Button variant="outline-info" onClick={exportJSON} disabled={types.length === 0}>
+                <FaFileCode className="me-1" /> JSON
+              </Button>
+            </ButtonGroup>
+          </div>
         </Card.Header>
         <Card.Body>
           {/* Add new type */}
