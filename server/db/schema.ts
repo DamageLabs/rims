@@ -47,6 +47,7 @@ CREATE TABLE IF NOT EXISTS items (
   reorder_point INTEGER NOT NULL DEFAULT 0,
   inventory_type_id INTEGER NOT NULL DEFAULT 1,
   custom_fields TEXT NOT NULL DEFAULT '{}',
+  parent_item_id INTEGER REFERENCES items(id) ON DELETE SET NULL,
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL
 );
@@ -122,6 +123,7 @@ CREATE INDEX IF NOT EXISTS idx_categories_type_id ON categories(inventory_type_i
 CREATE INDEX IF NOT EXISTS idx_items_category ON items(category);
 CREATE INDEX IF NOT EXISTS idx_items_barcode ON items(barcode);
 CREATE INDEX IF NOT EXISTS idx_items_type_id ON items(inventory_type_id);
+CREATE INDEX IF NOT EXISTS idx_items_parent_id ON items(parent_item_id);
 CREATE INDEX IF NOT EXISTS idx_stock_history_item_id ON stock_history(item_id);
 CREATE INDEX IF NOT EXISTS idx_stock_history_timestamp ON stock_history(timestamp);
 CREATE INDEX IF NOT EXISTS idx_cost_history_item_id ON cost_history(item_id);

@@ -21,6 +21,18 @@ const FIREARMS_SCHEMA = JSON.stringify([
   { key: 'condition', label: 'Condition', type: 'select', required: false, options: ['New', 'Like New', 'Excellent', 'Very Good', 'Good', 'Fair', 'Poor'] },
 ]);
 
+const OPTICS_SCHEMA = JSON.stringify([
+  { key: 'magnification', label: 'Magnification', type: 'text', required: false, placeholder: 'e.g., 1x, 1-6x, 3.25 MOA dot' },
+  { key: 'reticleType', label: 'Reticle Type', type: 'select', required: false, options: ['Red Dot', 'Holographic', 'Crosshair', 'BDC', 'ACSS', 'MOA', 'MRAD', 'Duplex'] },
+  { key: 'tubeDiameter', label: 'Tube Diameter', type: 'text', required: false, placeholder: 'e.g., N/A, 30mm, 34mm' },
+  { key: 'mountType', label: 'Mount Type', type: 'text', required: false, placeholder: 'e.g., RMR footprint, Picatinny' },
+  { key: 'eyeRelief', label: 'Eye Relief', type: 'text', required: false, placeholder: 'e.g., Unlimited, 3.5"' },
+  { key: 'objectiveLens', label: 'Objective Lens', type: 'text', required: false, placeholder: 'e.g., 20mm' },
+  { key: 'batteryType', label: 'Battery Type', type: 'text', required: false, placeholder: 'e.g., CR2032' },
+  { key: 'weight', label: 'Weight', type: 'text', required: false, placeholder: 'e.g., 1.2 oz' },
+  { key: 'manufacturer', label: 'Manufacturer', type: 'text', required: false },
+]);
+
 const AMMUNITION_SCHEMA = JSON.stringify([
   { key: 'caliber', label: 'Caliber', type: 'text', required: true, placeholder: 'e.g., 9mm, .223, 12ga' },
   { key: 'grainWeight', label: 'Grain Weight', type: 'number', required: false, placeholder: 'e.g., 115, 55' },
@@ -34,6 +46,7 @@ const INVENTORY_TYPES = [
   { name: 'Electronics', icon: 'FaMicrochip', schema: ELECTRONICS_SCHEMA },
   { name: 'Firearms', icon: 'FaCrosshairs', schema: FIREARMS_SCHEMA },
   { name: 'Ammunition', icon: 'FaShieldAlt', schema: AMMUNITION_SCHEMA },
+  { name: 'Optics', icon: 'FaBullseye', schema: OPTICS_SCHEMA },
 ];
 
 const CATEGORY_PRESETS: Record<string, string[]> = {
@@ -42,9 +55,20 @@ const CATEGORY_PRESETS: Record<string, string[]> = {
     'Boards', 'LCDs & Displays', 'LEDs', 'Power', 'Cables', 'Tools',
     'Robotics', 'CNC', 'Components & Parts', 'Sensors', '3D Printing', 'Wireless',
   ],
-  Firearms: ['Handguns', 'Rifles', 'Shotguns', 'Accessories', 'Optics', 'Holsters & Cases'],
+  Firearms: ['Handguns', 'Rifles', 'Shotguns', 'Accessories', 'Holsters & Cases'],
   Ammunition: ['Rimfire', 'Centerfire Pistol', 'Centerfire Rifle', 'Shotshell', 'Specialty'],
+  Optics: ['Red Dots', 'Scopes', 'Magnifiers', 'Mounts & Rings', 'Accessories'],
 };
+
+function ensureParentItemIdColumn(): void {
+  const db = getDatabase();
+  try {
+    db.exec('ALTER TABLE items ADD COLUMN parent_item_id INTEGER REFERENCES items(id) ON DELETE SET NULL');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_items_parent_id ON items(parent_item_id)');
+  } catch {
+    // Column already exists — ignore
+  }
+}
 
 function ensureInventoryTypes(): void {
   const db = getDatabase();
@@ -107,7 +131,8 @@ export function seedDatabase(): void {
   const userCount = count('users');
 
   if (userCount > 0) {
-    // Existing DB — just ensure inventory types are present
+    // Existing DB — ensure schema is up to date
+    ensureParentItemIdColumn();
     ensureInventoryTypes();
     return;
   }
@@ -149,13 +174,13 @@ export function seedDatabase(): void {
 
     // --- Electronics Items ---
     const insertItem = db.prepare(`
-      INSERT INTO items (name, description, quantity, unit_value, value, category, location, barcode, reorder_point, inventory_type_id, custom_fields, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO items (name, description, quantity, unit_value, value, category, location, barcode, reorder_point, inventory_type_id, custom_fields, parent_item_id, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
     const electronicsTypeId = typeIds['Electronics'];
     for (const [name, desc, model, part, vendor, qty, unit, url, cat, loc, barcode, reorder] of SEED_ELECTRONICS) {
       const customFields = JSON.stringify({ modelNumber: model, partNumber: part, vendorName: vendor, vendorUrl: url });
-      insertItem.run(name, desc, qty, unit, qty * unit, cat, loc, barcode, reorder, electronicsTypeId, customFields, now, now);
+      insertItem.run(name, desc, qty, unit, qty * unit, cat, loc, barcode, reorder, electronicsTypeId, customFields, null, now, now);
     }
 
     // --- Firearms Item (Glock 19 Gen 5) ---
@@ -165,9 +190,24 @@ export function seedDatabase(): void {
       action: 'Semi-Automatic', manufacturer: 'Glock', triggerPull: '5.5 lbs',
       frame: 'Polymer', weight: '23.63 oz', fflRequired: true, condition: 'Like New',
     });
-    insertItem.run('Glock 19 Gen 5', 'Compact 9mm semi-automatic pistol, standard law enforcement and civilian model.', 1, 549.00, 549.00, 'Handguns', 'Safe A1', 'RIMS-F001', 0, firearmsTypeId, glockFields, now, now);
+    const glockResult = insertItem.run('Glock 19 Gen 5', 'Compact 9mm semi-automatic pistol, standard law enforcement and civilian model.', 1, 549.00, 549.00, 'Handguns', 'Safe A1', 'RIMS-F001', 0, firearmsTypeId, glockFields, null, now, now);
+    const glockId = Number(glockResult.lastInsertRowid);
+
+    // --- Optics Item (Trijicon RMR Type 2, paired to Glock 19) ---
+    const opticsTypeId = typeIds['Optics'];
+    const rmrFields = JSON.stringify({
+      magnification: '1x (3.25 MOA dot)',
+      reticleType: 'Red Dot',
+      tubeDiameter: 'N/A',
+      mountType: 'RMR footprint',
+      eyeRelief: 'Unlimited',
+      batteryType: 'CR2032',
+      weight: '1.2 oz',
+      manufacturer: 'Trijicon',
+    });
+    insertItem.run('Trijicon RMR Type 2', 'Ruggedized miniature reflex sight with 3.25 MOA adjustable LED dot.', 1, 469.00, 469.00, 'Red Dots', 'Safe A1', 'RIMS-O001', 0, opticsTypeId, rmrFields, glockId, now, now);
   });
 
   seed();
-  console.log('Database seeded: 2 users, 3 inventory types, 28 categories, 32 items');
+  console.log('Database seeded: 2 users, 4 inventory types, 34 categories, 33 items');
 }

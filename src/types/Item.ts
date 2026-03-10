@@ -12,6 +12,8 @@ export interface Item {
   reorderPoint: number;
   inventoryTypeId: number;
   customFields: Record<string, unknown>;
+  parentItemId: number | null;
+  childCount?: number;
   createdAt: string;
   updatedAt: string;
 }
