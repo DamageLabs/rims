@@ -10,7 +10,11 @@ const mockUser = {
   email: 'admin@example.com',
   role: 'admin' as const,
   signInCount: 5,
+  lastSignInAt: '2026-01-01T00:00:00Z',
+  lastSignInIp: '127.0.0.1',
   emailVerified: true,
+  emailVerificationToken: null,
+  emailVerificationTokenExpiresAt: null,
   createdAt: '2026-01-01T00:00:00Z',
   updatedAt: '2026-01-01T00:00:00Z',
 };
@@ -25,7 +29,7 @@ function TestComponent() {
       <div data-testid="email">{user?.email ?? 'none'}</div>
       <button onClick={() => login({ email: 'admin@example.com', password: 'changeme' })}>Login</button>
       <button onClick={() => logout()}>Logout</button>
-      <button onClick={() => register({ email: 'new@test.com', password: 'pass', confirmPassword: 'pass' })}>Register</button>
+      <button onClick={() => register({ email: 'new@test.com', password: 'pass', passwordConfirmation: 'pass' })}>Register</button>
       <button onClick={() => updateProfile({ email: 'updated@test.com' })}>Update</button>
       <button onClick={() => deleteAccount()}>Delete</button>
     </div>
@@ -65,7 +69,7 @@ describe('AuthContext', () => {
   });
 
   it('login does not set user when result has no user', async () => {
-    vi.mocked(authService.login).mockResolvedValue({ error: 'Invalid credentials' });
+    vi.mocked(authService.login).mockResolvedValue({ user: null, error: 'invalid_credentials' });
     render(<AuthProvider><TestComponent /></AuthProvider>);
 
     await act(async () => {
@@ -89,7 +93,7 @@ describe('AuthContext', () => {
   });
 
   it('register calls authService.register', async () => {
-    vi.mocked(authService.register).mockResolvedValue({ success: true });
+    vi.mocked(authService.register).mockResolvedValue({ success: true, message: 'Registered' });
     render(<AuthProvider><TestComponent /></AuthProvider>);
 
     await act(async () => {
@@ -99,7 +103,7 @@ describe('AuthContext', () => {
     expect(authService.register).toHaveBeenCalledWith({
       email: 'new@test.com',
       password: 'pass',
-      confirmPassword: 'pass',
+      passwordConfirmation: 'pass',
     });
   });
 
