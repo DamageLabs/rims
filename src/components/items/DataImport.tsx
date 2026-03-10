@@ -219,6 +219,7 @@ export default function DataImport() {
           reorderPoint: row.reorderPoint,
           inventoryTypeId: selectedTypeId,
           customFields: row.customFields,
+          parentItemId: null,
         };
 
         await itemService.createItem(itemData);
