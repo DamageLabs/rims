@@ -3,8 +3,11 @@ import { Link } from 'react-router-dom';
 import { Card, Table, Button, Badge, Form, Row, Col, Alert } from 'react-bootstrap';
 import { FaExclamationTriangle, FaShoppingCart, FaExternalLinkAlt, FaCheck } from 'react-icons/fa';
 import * as itemService from '../../services/itemService';
+import * as inventoryTypeService from '../../services/inventoryTypeService';
 import { Item } from '../../types/Item';
+import { InventoryType } from '../../types/InventoryType';
 import { formatCurrency } from '../../utils/formatters';
+import { LOW_STOCK_TYPE_NAMES } from '../../constants/config';
 
 type SortField = 'name' | 'quantity' | 'reorderPoint' | 'deficit' | 'category' | 'vendor';
 type SortDirection = 'asc' | 'desc';
@@ -34,6 +37,7 @@ function SortHeader({ field, sortField, sortDirection, onSort, children }: SortH
 
 export default function ReorderAlerts() {
   const [items, setItems] = useState<Item[]>([]);
+  const [inventoryTypes, setInventoryTypes] = useState<InventoryType[]>([]);
   const [sortField, setSortField] = useState<SortField>('deficit');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [categoryFilter, setCategoryFilter] = useState<string>('');
@@ -41,22 +45,34 @@ export default function ReorderAlerts() {
   const [acknowledgedIds, setAcknowledgedIds] = useState<Set<number>>(new Set());
 
   useEffect(() => {
-    async function loadItems() {
+    async function loadData() {
       try {
-        const allItems = await itemService.getAllItems();
+        const [allItems, types] = await Promise.all([
+          itemService.getAllItems(),
+          inventoryTypeService.getAllTypes(),
+        ]);
         setItems(allItems);
+        setInventoryTypes(types);
       } catch {
         // silently handle
       }
     }
-    loadItems();
+    loadData();
   }, []);
+
+  const lowStockTypeIds = useMemo(() => {
+    return new Set(
+      inventoryTypes
+        .filter((t) => LOW_STOCK_TYPE_NAMES.includes(t.name))
+        .map((t) => t.id)
+    );
+  }, [inventoryTypes]);
 
   const itemsNeedingReorder = useMemo(() => {
     return items.filter(
-      (item) => item.reorderPoint > 0 && item.quantity <= item.reorderPoint
+      (item) => lowStockTypeIds.has(item.inventoryTypeId) && item.reorderPoint > 0 && item.quantity <= item.reorderPoint
     );
-  }, [items]);
+  }, [items, lowStockTypeIds]);
 
   const categories = useMemo(() => {
     const cats = new Set(itemsNeedingReorder.map((item) => item.category));

@@ -7,15 +7,21 @@ interface LowStockAlertProps {
   items: Item[];
   onFilterLowStock: () => void;
   threshold?: number;
+  applicableTypeIds?: Set<number>;
 }
 
 export default function LowStockAlert({
   items,
   onFilterLowStock,
   threshold = LOW_STOCK_THRESHOLD,
+  applicableTypeIds,
 }: LowStockAlertProps) {
-  const lowStockItems = items.filter((item) => item.quantity <= threshold && item.quantity > 0);
-  const outOfStockItems = items.filter((item) => item.quantity === 0);
+  const eligibleItems = applicableTypeIds
+    ? items.filter((item) => applicableTypeIds.has(item.inventoryTypeId))
+    : items;
+
+  const lowStockItems = eligibleItems.filter((item) => item.quantity <= threshold && item.quantity > 0);
+  const outOfStockItems = eligibleItems.filter((item) => item.quantity === 0);
 
   if (lowStockItems.length === 0 && outOfStockItems.length === 0) {
     return null;

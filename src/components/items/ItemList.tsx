@@ -15,7 +15,7 @@ import LowStockAlert from '../common/LowStockAlert';
 import EmptyState from '../common/EmptyState';
 import { exportToCSV, exportToPDF } from '../../utils/export';
 import { formatCurrency } from '../../utils/formatters';
-import { ITEMS_PER_PAGE, LOW_STOCK_THRESHOLD } from '../../constants/config';
+import { ITEMS_PER_PAGE, LOW_STOCK_THRESHOLD, LOW_STOCK_TYPE_NAMES } from '../../constants/config';
 
 type SortField = 'name' | 'quantity' | 'unitValue' | 'value' | 'location' | 'category';
 type SortDirection = 'asc' | 'desc';
@@ -88,6 +88,14 @@ export default function ItemList() {
     loadItems();
   }, [loadItems]);
 
+  const lowStockTypeIds = useMemo(() => {
+    return new Set(
+      inventoryTypes
+        .filter((t) => LOW_STOCK_TYPE_NAMES.includes(t.name))
+        .map((t) => t.id)
+    );
+  }, [inventoryTypes]);
+
   // Reset page and selection when filters change
   const resetFiltersState = useCallback(() => {
     setCurrentPage(1);
@@ -133,14 +141,16 @@ export default function ItemList() {
         return false;
       }
 
-      // Low stock filter
-      if (showLowStockOnly && item.quantity > LOW_STOCK_THRESHOLD) {
-        return false;
+      // Low stock filter (only applies to Electronics and Ammunition)
+      if (showLowStockOnly) {
+        if (!lowStockTypeIds.has(item.inventoryTypeId) || item.quantity > LOW_STOCK_THRESHOLD) {
+          return false;
+        }
       }
 
       return true;
     });
-  }, [items, searchTerm, typeFilter, categoryFilter, showLowStockOnly]);
+  }, [items, searchTerm, typeFilter, categoryFilter, showLowStockOnly, lowStockTypeIds]);
 
   const sortedItems = useMemo(() => {
     return [...filteredItems].sort((a, b) => {
@@ -301,6 +311,7 @@ export default function ItemList() {
           items={items}
           onFilterLowStock={handleFilterLowStock}
           threshold={LOW_STOCK_THRESHOLD}
+          applicableTypeIds={lowStockTypeIds}
         />
 
         <ItemFilters
@@ -377,7 +388,7 @@ export default function ItemList() {
                 <td className="text-center">
                   <small>{inventoryTypes.find((t) => t.id === item.inventoryTypeId)?.name || '-'}</small>
                 </td>
-                <td className={`text-center ${item.quantity === 0 ? 'text-danger fw-bold' : item.quantity <= LOW_STOCK_THRESHOLD ? 'text-warning fw-bold' : ''}`}>
+                <td className={`text-center ${lowStockTypeIds.has(item.inventoryTypeId) ? (item.quantity === 0 ? 'text-danger fw-bold' : item.quantity <= LOW_STOCK_THRESHOLD ? 'text-warning fw-bold' : '') : ''}`}>
                   {item.quantity}
                 </td>
                 <td className="text-center">{formatCurrency(item.unitValue)}</td>
