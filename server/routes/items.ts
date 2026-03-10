@@ -7,7 +7,11 @@ const JSON_FIELDS = ['customFields'];
 // GET / — Get all items
 router.get('/', (_req: Request, res: Response) => {
   try {
-    const items = queryAll('SELECT * FROM items ORDER BY name', [], JSON_FIELDS);
+    const items = queryAll(
+      'SELECT items.*, (SELECT COUNT(*) FROM items c WHERE c.parent_item_id = items.id) AS child_count FROM items ORDER BY name',
+      [],
+      JSON_FIELDS
+    );
     res.json(items);
   } catch (error) {
     console.error('Error fetching items:', error);
@@ -73,6 +77,7 @@ router.post('/bulk-delete', (req: Request, res: Response) => {
       for (const id of ids) {
         const existing = queryOne<Record<string, unknown>>('SELECT * FROM items WHERE id = ?', [id], JSON_FIELDS);
         if (existing) {
+          run('UPDATE items SET parent_item_id = NULL WHERE parent_item_id = ?', [id]);
           run(
             'INSERT INTO stock_history (item_id, item_name, change_type, previous_quantity, new_quantity, previous_value, new_value, previous_category, new_category, notes, user_id, user_email, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
             [id, existing.name, 'deleted', existing.quantity, 0, existing.value, 0, existing.category, null, 'Bulk delete', null, null, now]
@@ -126,6 +131,21 @@ router.put('/bulk-category', (req: Request, res: Response) => {
   }
 });
 
+// GET /:id/children — Get child items of a parent
+router.get('/:id/children', (req: Request, res: Response) => {
+  try {
+    const children = queryAll(
+      'SELECT * FROM items WHERE parent_item_id = ? ORDER BY name',
+      [req.params.id],
+      JSON_FIELDS
+    );
+    res.json(children);
+  } catch (error) {
+    console.error('Error fetching child items:', error);
+    res.status(500).json({ error: 'Failed to fetch child items' });
+  }
+});
+
 // GET /:id — Get item by id
 router.get('/:id', (req: Request, res: Response) => {
   try {
@@ -145,7 +165,7 @@ router.get('/:id', (req: Request, res: Response) => {
 router.post('/', (req: Request, res: Response) => {
   try {
     const now = new Date().toISOString();
-    const { name, description, quantity, unitValue, picture, category, location, barcode, reorderPoint, inventoryTypeId, customFields } = req.body;
+    const { name, description, quantity, unitValue, picture, category, location, barcode, reorderPoint, inventoryTypeId, customFields, parentItemId } = req.body;
     const qty = quantity || 0;
     const uv = unitValue || 0;
     const value = qty * uv;
@@ -163,6 +183,7 @@ router.post('/', (req: Request, res: Response) => {
       reorderPoint: reorderPoint || 0,
       inventoryTypeId: inventoryTypeId || 1,
       customFields: customFields || {},
+      parentItemId: parentItemId || null,
       createdAt: now,
       updatedAt: now,
     }, JSON_FIELDS);
@@ -231,6 +252,9 @@ router.delete('/:id', (req: Request, res: Response) => {
     }
 
     const now = new Date().toISOString();
+    // Unlink children before deleting parent
+    run('UPDATE items SET parent_item_id = NULL WHERE parent_item_id = ?', [id]);
+
     run(
       'INSERT INTO stock_history (item_id, item_name, change_type, previous_quantity, new_quantity, previous_value, new_value, previous_category, new_category, notes, user_id, user_email, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
       [id, existing.name, 'deleted', existing.quantity, 0, existing.value, 0, existing.category, null, 'Item deleted', null, null, now]

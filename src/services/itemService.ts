@@ -65,3 +65,7 @@ export async function getLowStockItems(threshold: number): Promise<Item[]> {
 export async function getItemsNeedingReorder(): Promise<Item[]> {
   return api.get<Item[]>('/items/reorder');
 }
+
+export async function getItemChildren(id: number): Promise<Item[]> {
+  return api.get<Item[]>(`/items/${id}/children`);
+}
