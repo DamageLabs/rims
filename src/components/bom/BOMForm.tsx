@@ -26,21 +26,25 @@ export default function BOMForm() {
   const [selectedQuantity, setSelectedQuantity] = useState<number>(1);
 
   useEffect(() => {
-    setAvailableItems(itemService.getAllItems());
+    const loadData = async () => {
+      const items = await itemService.getAllItems();
+      setAvailableItems(items);
 
-    if (id) {
-      const bom = bomService.getBOMById(parseInt(id));
-      if (bom) {
-        setFormData({
-          name: bom.name,
-          description: bom.description,
-          items: bom.items,
-        });
-      } else {
-        showError('BOM not found.');
-        navigate('/bom');
+      if (id) {
+        const bom = await bomService.getBOMById(parseInt(id));
+        if (bom) {
+          setFormData({
+            name: bom.name,
+            description: bom.description,
+            items: bom.items,
+          });
+        } else {
+          showError('BOM not found.');
+          navigate('/bom');
+        }
       }
-    }
+    };
+    loadData();
   }, [id, navigate, showError]);
 
   const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -99,7 +103,7 @@ export default function BOMForm() {
     }));
   };
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
 
     if (formData.items.length === 0) {
@@ -109,7 +113,7 @@ export default function BOMForm() {
 
     try {
       if (isEditing) {
-        const updated = bomService.updateBOM(parseInt(id!), formData);
+        const updated = await bomService.updateBOM(parseInt(id!), formData);
         if (updated) {
           showSuccess('BOM updated successfully.');
           navigate(`/bom/${updated.id}`);
@@ -117,7 +121,7 @@ export default function BOMForm() {
           showError('Failed to update BOM.');
         }
       } else {
-        const created = bomService.createBOM(formData);
+        const created = await bomService.createBOM(formData);
         showSuccess('BOM created successfully.');
         navigate(`/bom/${created.id}`);
       }

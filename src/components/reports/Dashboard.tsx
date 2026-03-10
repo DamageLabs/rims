@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Card, Row, Col, Table } from 'react-bootstrap';
 import {
@@ -19,6 +19,8 @@ import * as stockHistoryService from '../../services/stockHistoryService';
 import { formatCurrency } from '../../utils/formatters';
 import { LOW_STOCK_THRESHOLD } from '../../constants/config';
 import { useTheme } from '../../contexts/ThemeContext';
+import { Item } from '../../types/Item';
+import { StockHistoryEntry } from '../../types/StockHistory';
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D', '#FFC658', '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD', '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E9'];
 
@@ -55,8 +57,20 @@ function StatCard({ title, value, icon, variant, link }: StatCardProps) {
 
 export default function Dashboard() {
   const { isDark } = useTheme();
-  const items = itemService.getAllItems();
-  const recentHistory = stockHistoryService.getRecentHistory(10);
+  const [items, setItems] = useState<Item[]>([]);
+  const [recentHistory, setRecentHistory] = useState<StockHistoryEntry[]>([]);
+
+  useEffect(() => {
+    const loadData = async () => {
+      const [loadedItems, loadedHistory] = await Promise.all([
+        itemService.getAllItems(),
+        stockHistoryService.getRecentHistory(10),
+      ]);
+      setItems(loadedItems);
+      setRecentHistory(loadedHistory);
+    };
+    loadData();
+  }, []);
 
   const stats = useMemo(() => {
     const totalItems = items.length;

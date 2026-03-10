@@ -1,10 +1,9 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { UserWithoutPassword, LoginCredentials, RegisterData } from '../types/User';
 import * as authService from '../services/authService';
-import { initializeData } from '../data/seed';
 import { LoginResult, RegisterResult } from '../services/authService';
 
-interface AuthContextType {
+export interface AuthContextType {
   user: UserWithoutPassword | null;
   isAuthenticated: boolean;
   isAdmin: boolean;
@@ -12,8 +11,8 @@ interface AuthContextType {
   login: (credentials: LoginCredentials) => Promise<LoginResult>;
   logout: () => void;
   register: (data: RegisterData) => Promise<RegisterResult>;
-  updateProfile: (data: { email?: string; password?: string; currentPassword?: string }) => UserWithoutPassword | null;
-  deleteAccount: () => boolean;
+  updateProfile: (data: { email?: string; password?: string; currentPassword?: string }) => Promise<UserWithoutPassword | null>;
+  deleteAccount: () => Promise<boolean>;
   refreshUser: () => void;
 }
 
@@ -24,24 +23,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const init = async () => {
-      try {
-        // Initialize database (async)
-        await initializeData();
-
-        // Get current user from session
-        const currentUser = authService.getCurrentUser();
-        if (currentUser) {
-          setUser(currentUser);
-        }
-      } catch (error) {
-        console.error('Failed to initialize database:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    init();
+    // No client-side DB init needed — server handles seeding.
+    // Just restore session from localStorage.
+    const currentUser = authService.getCurrentUser();
+    if (currentUser) {
+      setUser(currentUser);
+    }
+    setIsLoading(false);
   }, []);
 
   const login = async (credentials: LoginCredentials): Promise<LoginResult> => {
@@ -58,22 +46,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const register = async (data: RegisterData): Promise<RegisterResult> => {
-    // Registration now goes through the server API and doesn't auto-login
     return authService.register(data);
   };
 
-  const updateProfile = (data: { email?: string; password?: string; currentPassword?: string }): UserWithoutPassword | null => {
+  const updateProfile = async (data: { email?: string; password?: string; currentPassword?: string }): Promise<UserWithoutPassword | null> => {
     if (!user) return null;
-    const updatedUser = authService.updateProfile(user.id, data);
+    const updatedUser = await authService.updateProfile(user.id, data);
     if (updatedUser) {
       setUser(updatedUser);
     }
     return updatedUser;
   };
 
-  const deleteAccount = (): boolean => {
+  const deleteAccount = async (): Promise<boolean> => {
     if (!user) return false;
-    const result = authService.deleteAccount(user.id);
+    const result = await authService.deleteAccount(user.id);
     if (result) {
       setUser(null);
     }
@@ -98,7 +85,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     refreshUser,
   };
 
-  // Show loading state while initializing database
   if (isLoading) {
     return (
       <div className="d-flex justify-content-center align-items-center" style={{ minHeight: '100vh' }}>
@@ -106,7 +92,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           <div className="spinner-border text-primary mb-3" role="status">
             <span className="visually-hidden">Loading...</span>
           </div>
-          <p className="text-muted">Initializing database...</p>
+          <p className="text-muted">Loading...</p>
         </div>
       </div>
     );

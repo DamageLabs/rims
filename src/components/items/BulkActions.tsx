@@ -18,7 +18,15 @@ export default function BulkActions({
   const [categories, setCategories] = useState<string[]>([]);
 
   useEffect(() => {
-    setCategories(categoryService.getCategoryNames());
+    async function loadCategories() {
+      try {
+        const cats = await categoryService.getCategoryNames();
+        setCategories(cats);
+      } catch {
+        // silently handle
+      }
+    }
+    loadCategories();
   }, []);
 
   if (selectedCount === 0) {

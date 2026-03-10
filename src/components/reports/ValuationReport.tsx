@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Card, Table, Row, Col, Form, Button, ButtonGroup, Collapse } from 'react-bootstrap';
 import { FaChevronDown, FaChevronRight, FaFileExcel } from 'react-icons/fa';
@@ -12,6 +12,7 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import * as itemService from '../../services/itemService';
+import { Item } from '../../types/Item';
 import { formatCurrency } from '../../utils/formatters';
 import { useTheme } from '../../contexts/ThemeContext';
 
@@ -19,13 +20,11 @@ type GroupBy = 'category' | 'location' | 'vendor';
 
 interface GroupedData {
   name: string;
-  items: typeof items;
+  items: Item[];
   totalQuantity: number;
   totalValue: number;
   itemCount: number;
 }
-
-const items = itemService.getAllItems();
 
 export default function ValuationReport() {
   const { isDark } = useTheme();
@@ -33,7 +32,15 @@ export default function ValuationReport() {
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [showChart, setShowChart] = useState(true);
 
-  const allItems = itemService.getAllItems();
+  const [allItems, setAllItems] = useState<Item[]>([]);
+
+  useEffect(() => {
+    const loadItems = async () => {
+      const items = await itemService.getAllItems();
+      setAllItems(items);
+    };
+    loadItems();
+  }, []);
 
   const groupedData = useMemo(() => {
     const groups = new Map<string, typeof allItems>();

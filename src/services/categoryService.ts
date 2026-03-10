@@ -1,120 +1,57 @@
 import { Category, CategoryFormData } from '../types/Category';
-import { categoryRepository } from './db/repositories';
+import { api } from './api';
 
-/**
- * Get all categories sorted by sort_order
- */
-export function getAllCategories(): Category[] {
-  return categoryRepository.getAllSorted();
+export async function getAllCategories(): Promise<Category[]> {
+  return api.get<Category[]>('/categories');
 }
 
-/**
- * Get categories for a specific inventory type
- */
-export function getCategoriesByType(inventoryTypeId: number): Category[] {
-  return categoryRepository.findByType(inventoryTypeId);
+export async function getCategoriesByType(inventoryTypeId: number): Promise<Category[]> {
+  return api.get<Category[]>(`/categories?typeId=${inventoryTypeId}`);
 }
 
-/**
- * Get category names for a specific inventory type
- */
-export function getCategoryNamesByType(inventoryTypeId: number): string[] {
-  return categoryRepository.findByType(inventoryTypeId).map((c) => c.name);
+export async function getCategoryNamesByType(inventoryTypeId: number): Promise<string[]> {
+  const cats = await getCategoriesByType(inventoryTypeId);
+  return cats.map((c) => c.name);
 }
 
-/**
- * Get all category names sorted by sort_order
- */
-export function getCategoryNames(): string[] {
-  return categoryRepository.getAllSorted().map((c) => c.name);
+export async function getCategoryNames(): Promise<string[]> {
+  const cats = await getAllCategories();
+  return cats.map((c) => c.name);
 }
 
-/**
- * Get a category by ID
- */
-export function getCategoryById(id: number): Category | null {
-  return categoryRepository.getById(id);
-}
-
-/**
- * Create a new category
- */
-export function createCategory(data: CategoryFormData): Category {
-  if (!data.name.trim()) {
-    throw new Error('Category name is required.');
-  }
-
-  if (categoryRepository.nameExists(data.name, undefined, data.inventoryTypeId)) {
-    throw new Error(`Category "${data.name}" already exists for this inventory type.`);
-  }
-
-  const now = new Date().toISOString();
-  const sortOrder = data.sortOrder ?? categoryRepository.getNextSortOrder();
-
-  return categoryRepository.create({
-    name: data.name.trim(),
-    sortOrder,
-    inventoryTypeId: data.inventoryTypeId || 1,
-    createdAt: now,
-    updatedAt: now,
-  });
-}
-
-/**
- * Update a category
- */
-export function updateCategory(id: number, data: Partial<CategoryFormData>): Category | null {
-  const existing = categoryRepository.getById(id);
-  if (!existing) {
+export async function getCategoryById(id: number): Promise<Category | null> {
+  try {
+    return await api.get<Category>(`/categories/${id}`);
+  } catch {
     return null;
   }
-
-  if (data.name !== undefined) {
-    if (!data.name.trim()) {
-      throw new Error('Category name is required.');
-    }
-
-    if (categoryRepository.nameExists(data.name, id)) {
-      throw new Error(`Category "${data.name}" already exists.`);
-    }
-  }
-
-  return categoryRepository.update(id, {
-    ...data,
-    name: data.name?.trim(),
-    updatedAt: new Date().toISOString(),
-  } as Partial<Category>);
 }
 
-/**
- * Delete a category
- */
-export function deleteCategory(id: number): boolean {
-  const category = categoryRepository.getById(id);
-  if (!category) {
-    throw new Error('Category not found.');
-  }
-
-  if (categoryRepository.isInUse(category.name)) {
-    throw new Error(
-      `Cannot delete "${category.name}" because it is assigned to items. Reassign those items first.`
-    );
-  }
-
-  return categoryRepository.delete(id);
+export async function createCategory(data: CategoryFormData): Promise<Category> {
+  return api.post<Category>('/categories', data);
 }
 
-/**
- * Reorder categories
- */
-export function reorderCategories(orderedIds: number[]): void {
-  const updates = orderedIds.map((id, index) => ({ id, sortOrder: index }));
-  categoryRepository.updateSortOrders(updates);
+export async function updateCategory(id: number, data: Partial<CategoryFormData>): Promise<Category | null> {
+  try {
+    return await api.put<Category>(`/categories/${id}`, data);
+  } catch {
+    return null;
+  }
 }
 
-/**
- * Get item counts per category
- */
-export function getCategoryItemCounts(): Array<{ name: string; count: number }> {
-  return categoryRepository.getItemCounts();
+export async function deleteCategory(id: number): Promise<boolean> {
+  try {
+    await api.delete(`/categories/${id}`);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export async function reorderCategories(orderedIds: number[]): Promise<void> {
+  await api.put('/categories/reorder', { orderedIds });
+}
+
+export async function getCategoryItemCounts(): Promise<Array<{ name: string; count: number }>> {
+  return api.get('/categories/counts');
 }

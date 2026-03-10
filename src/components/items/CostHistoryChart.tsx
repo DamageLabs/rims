@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Card, Badge, Row, Col } from 'react-bootstrap';
 import { FaArrowUp, FaArrowDown, FaMinus } from 'react-icons/fa';
 import * as costHistoryService from '../../services/costHistoryService';
@@ -10,17 +10,26 @@ interface CostHistoryChartProps {
 }
 
 export default function CostHistoryChart({ itemId, currentValue }: CostHistoryChartProps) {
-  const history = useMemo(
-    () => costHistoryService.getCostHistoryForItem(itemId),
-    [itemId]
-  );
+  const [history, setHistory] = useState<CostHistoryEntry[]>([]);
+  const [stats, setStats] = useState<CostStats | null>(null);
 
-  const stats = useMemo(
-    () => costHistoryService.getCostStats(itemId, currentValue),
-    [itemId, currentValue]
-  );
+  useEffect(() => {
+    async function loadData() {
+      try {
+        const [historyData, statsData] = await Promise.all([
+          costHistoryService.getCostHistoryForItem(itemId),
+          costHistoryService.getCostStats(itemId, currentValue),
+        ]);
+        setHistory(historyData);
+        setStats(statsData);
+      } catch {
+        // silently handle
+      }
+    }
+    loadData();
+  }, [itemId, currentValue]);
 
-  if (history.length === 0) {
+  if (history.length === 0 || !stats) {
     return null;
   }
 

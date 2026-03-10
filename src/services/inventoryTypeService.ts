@@ -1,73 +1,41 @@
 import { InventoryType, InventoryTypeFormData, FieldDefinition } from '../types/InventoryType';
-import { inventoryTypeRepository, itemRepository } from './db/repositories';
+import { api } from './api';
 
-export function getAllTypes(): InventoryType[] {
-  return inventoryTypeRepository.getAll();
+export async function getAllTypes(): Promise<InventoryType[]> {
+  return api.get<InventoryType[]>('/inventory-types');
 }
 
-export function getTypeById(id: number): InventoryType | null {
-  return inventoryTypeRepository.getById(id);
-}
-
-export function createType(data: InventoryTypeFormData): InventoryType {
-  if (!data.name.trim()) {
-    throw new Error('Inventory type name is required.');
-  }
-
-  if (inventoryTypeRepository.nameExists(data.name)) {
-    throw new Error(`Inventory type "${data.name}" already exists.`);
-  }
-
-  const now = new Date().toISOString();
-  return inventoryTypeRepository.create({
-    name: data.name.trim(),
-    icon: data.icon || '',
-    schema: data.schema || [],
-    createdAt: now,
-    updatedAt: now,
-  });
-}
-
-export function updateType(id: number, data: Partial<InventoryTypeFormData>): InventoryType | null {
-  const existing = inventoryTypeRepository.getById(id);
-  if (!existing) {
+export async function getTypeById(id: number): Promise<InventoryType | null> {
+  try {
+    return await api.get<InventoryType>(`/inventory-types/${id}`);
+  } catch {
     return null;
   }
-
-  if (data.name !== undefined) {
-    if (!data.name.trim()) {
-      throw new Error('Inventory type name is required.');
-    }
-    if (inventoryTypeRepository.nameExists(data.name, id)) {
-      throw new Error(`Inventory type "${data.name}" already exists.`);
-    }
-  }
-
-  return inventoryTypeRepository.update(id, {
-    ...data,
-    name: data.name?.trim(),
-    updatedAt: new Date().toISOString(),
-  } as Partial<InventoryType>);
 }
 
-export function deleteType(id: number): boolean {
-  const type = inventoryTypeRepository.getById(id);
-  if (!type) {
-    throw new Error('Inventory type not found.');
-  }
-
-  const items = itemRepository.findByType(id);
-  if (items.length > 0) {
-    throw new Error(
-      `Cannot delete "${type.name}" because ${items.length} item(s) are using it. Reassign those items first.`
-    );
-  }
-
-  return inventoryTypeRepository.delete(id);
+export async function createType(data: InventoryTypeFormData): Promise<InventoryType> {
+  return api.post<InventoryType>('/inventory-types', data);
 }
 
-export function getTypeSchema(id: number): FieldDefinition[] {
-  const type = inventoryTypeRepository.getById(id);
+export async function updateType(id: number, data: Partial<InventoryTypeFormData>): Promise<InventoryType | null> {
+  try {
+    return await api.put<InventoryType>(`/inventory-types/${id}`, data);
+  } catch {
+    return null;
+  }
+}
+
+export async function deleteType(id: number): Promise<boolean> {
+  try {
+    await api.delete(`/inventory-types/${id}`);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export async function getTypeSchema(id: number): Promise<FieldDefinition[]> {
+  const type = await getTypeById(id);
   return type?.schema || [];
 }
 
@@ -76,18 +44,15 @@ export function validateCustomFields(
   schema: FieldDefinition[]
 ): string[] {
   const errors: string[] = [];
-
   for (const field of schema) {
     const value = customFields[field.key];
     if (field.required && (value === undefined || value === null || value === '')) {
       errors.push(`${field.label} is required.`);
     }
   }
-
   return errors;
 }
 
-// Preset inventory type definitions
 export const PRESET_TYPES: InventoryTypeFormData[] = [
   {
     name: 'Electronics',
@@ -108,6 +73,9 @@ export const PRESET_TYPES: InventoryTypeFormData[] = [
       { key: 'barrelLength', label: 'Barrel Length', type: 'text', required: false, placeholder: 'e.g., 16"' },
       { key: 'action', label: 'Action', type: 'select', required: false, options: ['Semi-Automatic', 'Bolt Action', 'Pump Action', 'Lever Action', 'Revolver', 'Single Shot', 'Full Auto'] },
       { key: 'manufacturer', label: 'Manufacturer', type: 'text', required: false },
+      { key: 'triggerPull', label: 'Trigger Pull', type: 'text', required: false, placeholder: 'e.g., 5.5 lbs' },
+      { key: 'frame', label: 'Frame', type: 'select', required: false, options: ['Polymer', 'Aluminum', 'Steel', 'Titanium', 'Alloy'] },
+      { key: 'weight', label: 'Weight', type: 'text', required: false, placeholder: 'e.g., 30 oz' },
       { key: 'fflRequired', label: 'FFL Required', type: 'boolean', required: false },
       { key: 'condition', label: 'Condition', type: 'select', required: false, options: ['New', 'Like New', 'Excellent', 'Very Good', 'Good', 'Fair', 'Poor'] },
     ],

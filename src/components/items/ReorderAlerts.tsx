@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Card, Table, Button, Badge, Form, Row, Col, Alert } from 'react-bootstrap';
 import { FaExclamationTriangle, FaShoppingCart, FaExternalLinkAlt, FaCheck } from 'react-icons/fa';
@@ -33,12 +33,24 @@ function SortHeader({ field, sortField, sortDirection, onSort, children }: SortH
 }
 
 export default function ReorderAlerts() {
-  const items = itemService.getAllItems();
+  const [items, setItems] = useState<Item[]>([]);
   const [sortField, setSortField] = useState<SortField>('deficit');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [categoryFilter, setCategoryFilter] = useState<string>('');
   const [vendorFilter, setVendorFilter] = useState<string>('');
   const [acknowledgedIds, setAcknowledgedIds] = useState<Set<number>>(new Set());
+
+  useEffect(() => {
+    async function loadItems() {
+      try {
+        const allItems = await itemService.getAllItems();
+        setItems(allItems);
+      } catch {
+        // silently handle
+      }
+    }
+    loadItems();
+  }, []);
 
   const itemsNeedingReorder = useMemo(() => {
     return items.filter(

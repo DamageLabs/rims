@@ -1,4 +1,4 @@
-import { useState, useRef, ChangeEvent } from 'react';
+import { useState, useEffect, useRef, ChangeEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, Form, Button, Table, Alert, Row, Col, Badge } from 'react-bootstrap';
 import { FaFileUpload, FaCheck, FaTimes, FaDownload } from 'react-icons/fa';
@@ -74,12 +74,31 @@ export default function DataImport() {
   const [importing, setImporting] = useState(false);
   const [selectedTypeId, setSelectedTypeId] = useState<number>(1);
   const [inventoryTypes, setInventoryTypes] = useState<InventoryType[]>([]);
+  const [categories, setCategories] = useState<string[]>([]);
 
-  useState(() => {
-    setInventoryTypes(inventoryTypeService.getAllTypes());
-  });
+  useEffect(() => {
+    async function loadTypes() {
+      try {
+        const types = await inventoryTypeService.getAllTypes();
+        setInventoryTypes(types);
+      } catch {
+        // silently handle
+      }
+    }
+    loadTypes();
+  }, []);
 
-  const categories = categoryService.getCategoryNamesByType(selectedTypeId);
+  useEffect(() => {
+    async function loadCategories() {
+      try {
+        const cats = await categoryService.getCategoryNamesByType(selectedTypeId);
+        setCategories(cats);
+      } catch {
+        // silently handle
+      }
+    }
+    loadCategories();
+  }, [selectedTypeId]);
 
   const validateRow = (row: Partial<ImportRow>): ImportRow => {
     const errors: string[] = [];
@@ -202,7 +221,7 @@ export default function DataImport() {
           customFields: row.customFields,
         };
 
-        itemService.createItem(itemData);
+        await itemService.createItem(itemData);
         imported++;
       }
 

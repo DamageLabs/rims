@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Card, Table, Row, Col, Form, Button, ButtonGroup, Badge } from 'react-bootstrap';
 import { FaFileExcel, FaFilePdf, FaPlus, FaTimes, FaArrowUp, FaArrowDown } from 'react-icons/fa';
 import * as itemService from '../../services/itemService';
@@ -49,8 +49,20 @@ const FILTER_FIELDS: { key: keyof Item; label: string; type: 'string' | 'number'
 ];
 
 export default function CustomReport() {
-  const allItems = itemService.getAllItems();
-  const categories = categoryService.getCategoryNames();
+  const [allItems, setAllItems] = useState<Item[]>([]);
+  const [categories, setCategories] = useState<string[]>([]);
+
+  useEffect(() => {
+    const loadData = async () => {
+      const [items, cats] = await Promise.all([
+        itemService.getAllItems(),
+        categoryService.getCategoryNames(),
+      ]);
+      setAllItems(items);
+      setCategories(cats);
+    };
+    loadData();
+  }, []);
 
   const [columns, setColumns] = useState<ColumnConfig[]>(ALL_COLUMNS);
   const [filters, setFilters] = useState<FilterConfig[]>([]);

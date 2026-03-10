@@ -5,42 +5,21 @@ import {
   createItem,
   updateItem,
   deleteItem,
-  getTotalQuantity,
-  getTotalValue,
   deleteItems,
   updateItemsCategory,
   getLowStockItems,
   getItemsNeedingReorder,
+  getItemStats,
 } from './itemService';
-import { itemRepository } from './db/repositories';
-import * as stockHistoryService from './stockHistoryService';
-import * as costHistoryService from './costHistoryService';
+import { api } from './api';
 
-vi.mock('./db/repositories', () => ({
-  itemRepository: {
-    getAll: vi.fn(),
-    getById: vi.fn(),
-    createWithValue: vi.fn(),
-    updateWithValue: vi.fn(),
+vi.mock('./api', () => ({
+  api: {
+    get: vi.fn(),
+    post: vi.fn(),
+    put: vi.fn(),
     delete: vi.fn(),
-    deleteMany: vi.fn(),
-    getTotalQuantity: vi.fn(),
-    getTotalValue: vi.fn(),
-    updateCategoryBulk: vi.fn(),
-    getLowStock: vi.fn(),
-    getItemsNeedingReorder: vi.fn(),
   },
-}));
-
-vi.mock('./stockHistoryService', () => ({
-  recordItemCreated: vi.fn(),
-  recordItemUpdated: vi.fn(),
-  recordItemDeleted: vi.fn(),
-  recordBulkCategoryChange: vi.fn(),
-}));
-
-vi.mock('./costHistoryService', () => ({
-  recordCostChange: vi.fn(),
 }));
 
 const mockItem = {
@@ -67,38 +46,38 @@ describe('itemService', () => {
   });
 
   describe('getAllItems', () => {
-    it('returns all items from repository', () => {
+    it('returns all items from API', async () => {
       const items = [mockItem, { ...mockItem, id: 2, name: 'Item 2' }];
-      vi.mocked(itemRepository.getAll).mockReturnValue(items);
+      vi.mocked(api.get).mockResolvedValue(items);
 
-      const result = getAllItems();
+      const result = await getAllItems();
 
-      expect(itemRepository.getAll).toHaveBeenCalled();
+      expect(api.get).toHaveBeenCalledWith('/items');
       expect(result).toEqual(items);
     });
   });
 
   describe('getItemById', () => {
-    it('returns item when found', () => {
-      vi.mocked(itemRepository.getById).mockReturnValue(mockItem);
+    it('returns item when found', async () => {
+      vi.mocked(api.get).mockResolvedValue(mockItem);
 
-      const result = getItemById(1);
+      const result = await getItemById(1);
 
-      expect(itemRepository.getById).toHaveBeenCalledWith(1);
+      expect(api.get).toHaveBeenCalledWith('/items/1');
       expect(result).toEqual(mockItem);
     });
 
-    it('returns null when not found', () => {
-      vi.mocked(itemRepository.getById).mockReturnValue(null);
+    it('returns null when not found', async () => {
+      vi.mocked(api.get).mockRejectedValue(new Error('Not found'));
 
-      const result = getItemById(999);
+      const result = await getItemById(999);
 
       expect(result).toBeNull();
     });
   });
 
   describe('createItem', () => {
-    it('creates item and records history', () => {
+    it('creates item via API', async () => {
       const formData = {
         name: 'New Item',
         description: 'Description',
@@ -112,168 +91,107 @@ describe('itemService', () => {
         inventoryTypeId: 1,
         customFields: { modelNumber: 'TM-002', vendorName: 'Vendor' },
       };
-      vi.mocked(itemRepository.createWithValue).mockReturnValue({ ...mockItem, ...formData, id: 2, value: 50.0 });
+      vi.mocked(api.post).mockResolvedValue({ ...mockItem, ...formData, id: 2, value: 50.0 });
 
-      const result = createItem(formData);
+      const result = await createItem(formData);
 
-      expect(itemRepository.createWithValue).toHaveBeenCalledWith(
-        expect.objectContaining({
-          ...formData,
-          createdAt: expect.any(String),
-          updatedAt: expect.any(String),
-        })
-      );
-      expect(stockHistoryService.recordItemCreated).toHaveBeenCalled();
+      expect(api.post).toHaveBeenCalledWith('/items', formData);
       expect(result.name).toBe('New Item');
     });
   });
 
   describe('updateItem', () => {
-    it('returns null when item not found', () => {
-      vi.mocked(itemRepository.getById).mockReturnValue(null);
+    it('returns null when item not found', async () => {
+      vi.mocked(api.put).mockRejectedValue(new Error('Not found'));
 
-      const result = updateItem(999, { name: 'Updated' });
+      const result = await updateItem(999, { name: 'Updated' });
 
       expect(result).toBeNull();
     });
 
-    it('updates item and records history', () => {
+    it('updates item via API', async () => {
       const updatedItem = { ...mockItem, name: 'Updated Item' };
-      vi.mocked(itemRepository.getById).mockReturnValue(mockItem);
-      vi.mocked(itemRepository.updateWithValue).mockReturnValue(updatedItem);
+      vi.mocked(api.put).mockResolvedValue(updatedItem);
 
-      const result = updateItem(1, { name: 'Updated Item' });
+      const result = await updateItem(1, { name: 'Updated Item' });
 
-      expect(itemRepository.updateWithValue).toHaveBeenCalled();
-      expect(stockHistoryService.recordItemUpdated).toHaveBeenCalledWith(mockItem, updatedItem);
+      expect(api.put).toHaveBeenCalledWith('/items/1', { name: 'Updated Item' });
       expect(result?.name).toBe('Updated Item');
-    });
-
-    it('records cost change when unitValue changes', () => {
-      const updatedItem = { ...mockItem, unitValue: 7.99 };
-      vi.mocked(itemRepository.getById).mockReturnValue(mockItem);
-      vi.mocked(itemRepository.updateWithValue).mockReturnValue(updatedItem);
-
-      updateItem(1, { unitValue: 7.99 });
-
-      expect(costHistoryService.recordCostChange).toHaveBeenCalledWith(
-        1,
-        5.99,
-        7.99,
-        'manual'
-      );
-    });
-
-    it('uses provided cost source', () => {
-      const updatedItem = { ...mockItem, unitValue: 7.99 };
-      vi.mocked(itemRepository.getById).mockReturnValue(mockItem);
-      vi.mocked(itemRepository.updateWithValue).mockReturnValue(updatedItem);
-
-      updateItem(1, { unitValue: 7.99 }, 'vendor_lookup');
-
-      expect(costHistoryService.recordCostChange).toHaveBeenCalledWith(
-        1,
-        5.99,
-        7.99,
-        'vendor_lookup'
-      );
     });
   });
 
   describe('deleteItem', () => {
-    it('returns false when item not found', () => {
-      vi.mocked(itemRepository.getById).mockReturnValue(null);
+    it('returns false when item not found', async () => {
+      vi.mocked(api.delete).mockRejectedValue(new Error('Not found'));
 
-      const result = deleteItem(999);
+      const result = await deleteItem(999);
 
       expect(result).toBe(false);
     });
 
-    it('deletes item and records history', () => {
-      vi.mocked(itemRepository.getById).mockReturnValue(mockItem);
-      vi.mocked(itemRepository.delete).mockReturnValue(true);
+    it('deletes item via API', async () => {
+      vi.mocked(api.delete).mockResolvedValue({ message: 'Item deleted' });
 
-      const result = deleteItem(1);
+      const result = await deleteItem(1);
 
-      expect(itemRepository.delete).toHaveBeenCalledWith(1);
-      expect(stockHistoryService.recordItemDeleted).toHaveBeenCalledWith(mockItem);
+      expect(api.delete).toHaveBeenCalledWith('/items/1');
       expect(result).toBe(true);
     });
   });
 
-  describe('getTotalQuantity', () => {
-    it('returns total quantity from repository', () => {
-      vi.mocked(itemRepository.getTotalQuantity).mockReturnValue(100);
+  describe('getItemStats', () => {
+    it('returns stats from API', async () => {
+      vi.mocked(api.get).mockResolvedValue({ totalQuantity: 100, totalValue: 1500 });
 
-      const result = getTotalQuantity();
+      const result = await getItemStats();
 
-      expect(result).toBe(100);
-    });
-  });
-
-  describe('getTotalValue', () => {
-    it('returns total value from repository', () => {
-      vi.mocked(itemRepository.getTotalValue).mockReturnValue(1500.0);
-
-      const result = getTotalValue();
-
-      expect(result).toBe(1500.0);
+      expect(api.get).toHaveBeenCalledWith('/items/stats');
+      expect(result).toEqual({ totalQuantity: 100, totalValue: 1500 });
     });
   });
 
   describe('deleteItems', () => {
-    it('deletes multiple items and records history for each', () => {
-      const items = [mockItem, { ...mockItem, id: 2 }];
-      vi.mocked(itemRepository.getById)
-        .mockReturnValueOnce(items[0])
-        .mockReturnValueOnce(items[1]);
-      vi.mocked(itemRepository.deleteMany).mockReturnValue(2);
+    it('deletes multiple items via API', async () => {
+      vi.mocked(api.post).mockResolvedValue({ message: 'Deleted 2 items' });
 
-      const result = deleteItems([1, 2]);
+      const result = await deleteItems([1, 2]);
 
-      expect(itemRepository.deleteMany).toHaveBeenCalledWith([1, 2]);
-      expect(stockHistoryService.recordItemDeleted).toHaveBeenCalledTimes(2);
+      expect(api.post).toHaveBeenCalledWith('/items/bulk-delete', { ids: [1, 2] });
       expect(result).toBe(2);
     });
   });
 
   describe('updateItemsCategory', () => {
-    it('updates category for multiple items', () => {
-      vi.mocked(itemRepository.getById)
-        .mockReturnValueOnce(mockItem)
-        .mockReturnValueOnce({ ...mockItem, id: 2 })
-        .mockReturnValueOnce({ ...mockItem, category: 'NewCategory' })
-        .mockReturnValueOnce({ ...mockItem, id: 2, category: 'NewCategory' });
-      vi.mocked(itemRepository.updateCategoryBulk).mockReturnValue(2);
+    it('updates category for multiple items via API', async () => {
+      vi.mocked(api.put).mockResolvedValue({ message: 'Updated category for 2 items' });
 
-      const result = updateItemsCategory([1, 2], 'NewCategory');
+      const result = await updateItemsCategory([1, 2], 'NewCategory');
 
-      expect(itemRepository.updateCategoryBulk).toHaveBeenCalled();
-      expect(stockHistoryService.recordBulkCategoryChange).toHaveBeenCalled();
+      expect(api.put).toHaveBeenCalledWith('/items/bulk-category', { ids: [1, 2], category: 'NewCategory' });
       expect(result).toBe(2);
     });
   });
 
   describe('getLowStockItems', () => {
-    it('returns items below threshold', () => {
+    it('returns items below threshold', async () => {
       const lowStockItems = [{ ...mockItem, quantity: 2 }];
-      vi.mocked(itemRepository.getLowStock).mockReturnValue(lowStockItems);
+      vi.mocked(api.get).mockResolvedValue(lowStockItems);
 
-      const result = getLowStockItems(5);
+      const result = await getLowStockItems(5);
 
-      expect(itemRepository.getLowStock).toHaveBeenCalledWith(5);
+      expect(api.get).toHaveBeenCalledWith('/items/low-stock?threshold=5');
       expect(result).toEqual(lowStockItems);
     });
   });
 
   describe('getItemsNeedingReorder', () => {
-    it('returns items needing reorder', () => {
+    it('returns items needing reorder', async () => {
       const reorderItems = [{ ...mockItem, quantity: 3, reorderPoint: 5 }];
-      vi.mocked(itemRepository.getItemsNeedingReorder).mockReturnValue(reorderItems);
+      vi.mocked(api.get).mockResolvedValue(reorderItems);
 
-      const result = getItemsNeedingReorder();
+      const result = await getItemsNeedingReorder();
 
-      expect(itemRepository.getItemsNeedingReorder).toHaveBeenCalled();
+      expect(api.get).toHaveBeenCalledWith('/items/reorder');
       expect(result).toEqual(reorderItems);
     });
   });

@@ -63,14 +63,26 @@ export default function ItemList() {
   const [inventoryTypes, setInventoryTypes] = useState<InventoryType[]>([]);
   const [typeFilter, setTypeFilter] = useState('');
 
-  const loadItems = useCallback(() => {
-    const allItems = itemService.getAllItems();
-    setItems(allItems);
-  }, []);
+  const loadItems = useCallback(async () => {
+    try {
+      const allItems = await itemService.getAllItems();
+      setItems(allItems);
+    } catch {
+      showError('Failed to load items.');
+    }
+  }, [showError]);
 
   useEffect(() => {
-    setInventoryTypes(inventoryTypeService.getAllTypes());
-  }, []);
+    async function loadTypes() {
+      try {
+        const types = await inventoryTypeService.getAllTypes();
+        setInventoryTypes(types);
+      } catch {
+        showError('Failed to load inventory types.');
+      }
+    }
+    loadTypes();
+  }, [showError]);
 
   useEffect(() => {
     loadItems();
@@ -164,32 +176,40 @@ export default function ItemList() {
     }
   }, [sortField]);
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!deleteModalItem) return;
 
-    const success = itemService.deleteItem(deleteModalItem.id);
-    if (success) {
-      showSuccess('Item was successfully destroyed.');
-      loadItems();
-      setSelectedIds((prev) => {
-        const next = new Set(prev);
-        next.delete(deleteModalItem.id);
-        return next;
-      });
-    } else {
+    try {
+      const success = await itemService.deleteItem(deleteModalItem.id);
+      if (success) {
+        showSuccess('Item was successfully destroyed.');
+        await loadItems();
+        setSelectedIds((prev) => {
+          const next = new Set(prev);
+          next.delete(deleteModalItem.id);
+          return next;
+        });
+      } else {
+        showError('Failed to delete item.');
+      }
+    } catch {
       showError('Failed to delete item.');
     }
     setDeleteModalItem(null);
   };
 
-  const handleBulkDelete = () => {
-    const ids = Array.from(selectedIds);
-    const deletedCount = itemService.deleteItems(ids);
-    if (deletedCount > 0) {
-      showSuccess(`${deletedCount} item${deletedCount !== 1 ? 's' : ''} deleted successfully.`);
-      loadItems();
-      setSelectedIds(new Set());
-    } else {
+  const handleBulkDelete = async () => {
+    try {
+      const ids = Array.from(selectedIds);
+      const deletedCount = await itemService.deleteItems(ids);
+      if (deletedCount > 0) {
+        showSuccess(`${deletedCount} item${deletedCount !== 1 ? 's' : ''} deleted successfully.`);
+        await loadItems();
+        setSelectedIds(new Set());
+      } else {
+        showError('Failed to delete items.');
+      }
+    } catch {
       showError('Failed to delete items.');
     }
     setShowBulkDeleteModal(false);
@@ -200,14 +220,18 @@ export default function ItemList() {
     setShowBulkCategoryModal(true);
   };
 
-  const confirmBulkCategoryChange = () => {
-    const ids = Array.from(selectedIds);
-    const updatedCount = itemService.updateItemsCategory(ids, pendingCategory);
-    if (updatedCount > 0) {
-      showSuccess(`${updatedCount} item${updatedCount !== 1 ? 's' : ''} updated to category "${pendingCategory}".`);
-      loadItems();
-      setSelectedIds(new Set());
-    } else {
+  const confirmBulkCategoryChange = async () => {
+    try {
+      const ids = Array.from(selectedIds);
+      const updatedCount = await itemService.updateItemsCategory(ids, pendingCategory);
+      if (updatedCount > 0) {
+        showSuccess(`${updatedCount} item${updatedCount !== 1 ? 's' : ''} updated to category "${pendingCategory}".`);
+        await loadItems();
+        setSelectedIds(new Set());
+      } else {
+        showError('Failed to update items.');
+      }
+    } catch {
       showError('Failed to update items.');
     }
     setShowBulkCategoryModal(false);
