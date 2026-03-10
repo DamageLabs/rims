@@ -377,16 +377,32 @@ export default function ItemList() {
                   />
                 </td>
                 <td>
-                  {item.parentItemId && <FaLink className="me-1 text-muted" size={12} title="Attached to parent item" />}
                   <Link to={`/items/${item.id}`}>{item.name}</Link>
                   {(item.childCount ?? 0) > 0 && (
                     <Badge bg="info" className="ms-1" title={`${item.childCount} attached item(s)`}>
                       {item.childCount}
                     </Badge>
                   )}
+                  {item.parentItemId && (() => {
+                    const parent = items.find((p) => p.id === item.parentItemId);
+                    return parent ? (
+                      <Link to={`/items/${parent.id}`} className="ms-1">
+                        <Badge bg="dark" title={`Attached to ${parent.name}`}>
+                          <FaLink size={10} className="me-1" />{parent.name}
+                        </Badge>
+                      </Link>
+                    ) : null;
+                  })()}
                 </td>
                 <td className="text-center">
-                  <small>{inventoryTypes.find((t) => t.id === item.inventoryTypeId)?.name || '-'}</small>
+                  {item.parentItemId && (() => {
+                    const parent = items.find((p) => p.id === item.parentItemId);
+                    const parentType = parent ? inventoryTypes.find((t) => t.id === parent.inventoryTypeId) : null;
+                    return parentType ? <Badge bg="primary" className="me-1">{parentType.name}</Badge> : null;
+                  })()}
+                  <Badge bg={item.parentItemId ? 'secondary' : 'primary'}>
+                    {inventoryTypes.find((t) => t.id === item.inventoryTypeId)?.name || '-'}
+                  </Badge>
                 </td>
                 <td className={`text-center ${lowStockTypeIds.has(item.inventoryTypeId) ? (item.quantity === 0 ? 'text-danger fw-bold' : item.quantity <= LOW_STOCK_THRESHOLD ? 'text-warning fw-bold' : '') : ''}`}>
                   {item.quantity}

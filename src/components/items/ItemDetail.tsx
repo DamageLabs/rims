@@ -20,6 +20,7 @@ export default function ItemDetail() {
   const { showSuccess, showError } = useAlert();
   const [item, setItem] = useState<Item | null>(null);
   const [parentItem, setParentItem] = useState<Item | null>(null);
+  const [parentType, setParentType] = useState<InventoryType | null>(null);
   const [inventoryType, setInventoryType] = useState<InventoryType | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [vendorPrices, setVendorPrices] = useState<VendorPriceResult[]>([]);
@@ -37,6 +38,10 @@ export default function ItemDetail() {
             if (foundItem.parentItemId) {
               const parent = await itemService.getItemById(foundItem.parentItemId);
               setParentItem(parent);
+              if (parent) {
+                const pType = await inventoryTypeService.getTypeById(parent.inventoryTypeId);
+                setParentType(pType);
+              }
             }
           } else {
             showError('Item not found.');
@@ -120,7 +125,10 @@ export default function ItemDetail() {
         {inventoryType && (
           <Row className="mb-2">
             <Col md={3} className="text-muted">Inventory Type</Col>
-            <Col md={9}><Badge bg="primary">{inventoryType.name}</Badge></Col>
+            <Col md={9}>
+              {parentType && <Badge bg="primary" className="me-1">{parentType.name}</Badge>}
+              <Badge bg={parentType ? 'secondary' : 'primary'}>{inventoryType.name}</Badge>
+            </Col>
           </Row>
         )}
 
@@ -211,7 +219,7 @@ export default function ItemDetail() {
         <CostHistoryChart itemId={item.id} currentValue={item.unitValue} />
 
         {/* Child Items */}
-        <ChildItemsList parentId={item.id} />
+        <ChildItemsList parentId={item.id} parentTypeName={inventoryType?.name} />
 
         {/* Vendor Price Comparison */}
         {!!(item.customFields?.partNumber) && (
