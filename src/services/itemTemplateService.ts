@@ -1,43 +1,40 @@
 import { ItemTemplate, ItemTemplateFormData } from '../types/ItemTemplate';
-import { itemTemplateRepository } from './db/repositories';
+import { api } from './api';
 
-export function getAllTemplates(): ItemTemplate[] {
-  return itemTemplateRepository.getAll();
+export async function getAllTemplates(): Promise<ItemTemplate[]> {
+  return api.get<ItemTemplate[]>('/templates');
 }
 
-export function getTemplateById(id: number): ItemTemplate | null {
-  return itemTemplateRepository.getById(id);
-}
-
-export function getTemplatesForCategory(category: string): ItemTemplate[] {
-  return itemTemplateRepository.findByCategory(category);
-}
-
-export function createTemplate(data: ItemTemplateFormData): ItemTemplate {
-  return itemTemplateRepository.create({
-    ...data,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  });
-}
-
-export function updateTemplate(id: number, data: Partial<ItemTemplateFormData>): ItemTemplate | null {
-  const existing = itemTemplateRepository.getById(id);
-  if (!existing) {
+export async function getTemplateById(id: number): Promise<ItemTemplate | null> {
+  try {
+    return await api.get<ItemTemplate>(`/templates/${id}`);
+  } catch {
     return null;
   }
-
-  return itemTemplateRepository.update(id, {
-    ...data,
-    updatedAt: new Date().toISOString(),
-  } as Partial<ItemTemplate>);
 }
 
-export function deleteTemplate(id: number): boolean {
-  return itemTemplateRepository.delete(id);
+export async function createTemplate(data: ItemTemplateFormData): Promise<ItemTemplate> {
+  return api.post<ItemTemplate>('/templates', data);
 }
 
-export function createTemplateFromItem(
+export async function updateTemplate(id: number, data: Partial<ItemTemplateFormData>): Promise<ItemTemplate | null> {
+  try {
+    return await api.put<ItemTemplate>(`/templates/${id}`, data);
+  } catch {
+    return null;
+  }
+}
+
+export async function deleteTemplate(id: number): Promise<boolean> {
+  try {
+    await api.delete(`/templates/${id}`);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export async function createTemplateFromItem(
   name: string,
   item: {
     category: string;
@@ -46,7 +43,7 @@ export function createTemplateFromItem(
     description?: string;
     customFields?: Record<string, unknown>;
   }
-): ItemTemplate {
+): Promise<ItemTemplate> {
   return createTemplate({
     name,
     category: item.category,

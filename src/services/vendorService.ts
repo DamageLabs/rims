@@ -1,7 +1,7 @@
 import { VendorPriceResult, SUPPORTED_VENDORS } from '../types/Vendor';
-import { vendorPriceCacheRepository } from './db/repositories';
 
 const CACHE_DURATION_MS = 15 * 60 * 1000; // 15 minutes
+const priceCache = new Map<string, VendorPriceResult>();
 
 function getCacheKey(vendor: string, partNumber: string): string {
   return `${vendor.toLowerCase()}-${partNumber.toLowerCase()}`;
@@ -12,10 +12,6 @@ function isCacheValid(entry: VendorPriceResult): boolean {
   return Date.now() - lastChecked < CACHE_DURATION_MS;
 }
 
-/**
- * Mock price lookup - simulates API call to vendor
- * In production, this would make actual API calls
- */
 function mockPriceLookup(vendor: string, partNumber: string): VendorPriceResult | null {
   const vendorLower = vendor.toLowerCase();
   const supportedVendor = SUPPORTED_VENDORS.find(
@@ -26,10 +22,9 @@ function mockPriceLookup(vendor: string, partNumber: string): VendorPriceResult 
     return null;
   }
 
-  // Generate mock price based on part number hash for consistency
   const hash = partNumber.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
   const basePrice = (hash % 100) + 0.99;
-  const inStock = hash % 3 !== 0; // ~66% in stock
+  const inStock = hash % 3 !== 0;
   const stockQty = inStock ? (hash % 500) + 1 : 0;
 
   return {
@@ -43,34 +38,24 @@ function mockPriceLookup(vendor: string, partNumber: string): VendorPriceResult 
   };
 }
 
-/**
- * Look up price from vendor (with caching)
- */
 export async function lookupPrice(vendor: string, partNumber: string): Promise<VendorPriceResult | null> {
   const cacheKey = getCacheKey(vendor, partNumber);
 
-  // Check cache first
-  const cached = vendorPriceCacheRepository.findByCacheKey(cacheKey);
+  const cached = priceCache.get(cacheKey);
   if (cached && isCacheValid(cached)) {
     return cached;
   }
 
-  // Simulate network delay
   await new Promise((resolve) => setTimeout(resolve, 500 + Math.random() * 1000));
 
   const result = mockPriceLookup(vendor, partNumber);
-
   if (result) {
-    // Update cache
-    vendorPriceCacheRepository.upsert(cacheKey, result);
+    priceCache.set(cacheKey, result);
   }
 
   return result;
 }
 
-/**
- * Look up prices from multiple vendors for comparison
- */
 export async function compareVendorPrices(partNumber: string): Promise<VendorPriceResult[]> {
   const results: VendorPriceResult[] = [];
 
@@ -81,27 +66,17 @@ export async function compareVendorPrices(partNumber: string): Promise<VendorPri
     }
   }
 
-  // Sort by price ascending
   return results.sort((a, b) => a.price - b.price);
 }
 
-/**
- * Clear the price cache
- */
 export function clearPriceCache(): void {
-  vendorPriceCacheRepository.clearAll();
+  priceCache.clear();
 }
 
-/**
- * Get supported vendor names
- */
 export function getSupportedVendors(): string[] {
   return SUPPORTED_VENDORS.map((v) => v.name);
 }
 
-/**
- * Check if a vendor is supported
- */
 export function isVendorSupported(vendor: string): boolean {
   const vendorLower = vendor.toLowerCase();
   return SUPPORTED_VENDORS.some(

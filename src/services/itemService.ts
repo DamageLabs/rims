@@ -1,116 +1,67 @@
 import { Item, ItemFormData } from '../types/Item';
-import { itemRepository } from './db/repositories';
-import * as stockHistoryService from './stockHistoryService';
-import * as costHistoryService from './costHistoryService';
+import { api } from './api';
 
-export function getAllItems(): Item[] {
-  return itemRepository.getAll();
+export async function getAllItems(): Promise<Item[]> {
+  return api.get<Item[]>('/items');
 }
 
-export function getItemById(id: number): Item | null {
-  return itemRepository.getById(id);
-}
-
-export function createItem(data: ItemFormData): Item {
-  const newItem = itemRepository.createWithValue({
-    ...data,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  });
-
-  stockHistoryService.recordItemCreated(newItem);
-  return newItem;
-}
-
-export function updateItem(id: number, data: Partial<ItemFormData>, costSource?: 'manual' | 'vendor_lookup' | 'import'): Item | null {
-  const existingItem = itemRepository.getById(id);
-  if (!existingItem) {
+export async function getItemById(id: number): Promise<Item | null> {
+  try {
+    return await api.get<Item>(`/items/${id}`);
+  } catch {
     return null;
   }
-
-  const updatedItem = itemRepository.updateWithValue(
-    id,
-    data,
-    new Date().toISOString()
-  );
-
-  if (!updatedItem) {
-    return null;
-  }
-
-  stockHistoryService.recordItemUpdated(existingItem, updatedItem);
-
-  // Record cost change if unitValue changed
-  const newUnitValue = data.unitValue ?? existingItem.unitValue;
-  if (existingItem.unitValue !== newUnitValue) {
-    costHistoryService.recordCostChange(id, existingItem.unitValue, newUnitValue, costSource || 'manual');
-  }
-
-  return updatedItem;
 }
 
-export function deleteItem(id: number): boolean {
-  const itemToDelete = itemRepository.getById(id);
-  if (!itemToDelete) {
+export async function createItem(data: ItemFormData): Promise<Item> {
+  return api.post<Item>('/items', data);
+}
+
+export async function updateItem(id: number, data: Partial<ItemFormData>): Promise<Item | null> {
+  try {
+    return await api.put<Item>(`/items/${id}`, data);
+  } catch {
+    return null;
+  }
+}
+
+export async function deleteItem(id: number): Promise<boolean> {
+  try {
+    await api.delete(`/items/${id}`);
+    return true;
+  } catch {
     return false;
   }
-
-  const result = itemRepository.delete(id);
-  if (result) {
-    stockHistoryService.recordItemDeleted(itemToDelete);
-  }
-  return result;
 }
 
-export function getTotalQuantity(): number {
-  return itemRepository.getTotalQuantity();
+export async function getTotalQuantity(): Promise<number> {
+  const stats = await api.get<{ totalQuantity: number; totalValue: number }>('/items/stats');
+  return stats.totalQuantity;
 }
 
-export function getTotalValue(): number {
-  return itemRepository.getTotalValue();
+export async function getTotalValue(): Promise<number> {
+  const stats = await api.get<{ totalQuantity: number; totalValue: number }>('/items/stats');
+  return stats.totalValue;
 }
 
-export function deleteItems(ids: number[]): number {
-  const itemsToDelete = ids
-    .map((id) => itemRepository.getById(id))
-    .filter((item): item is Item => item !== null);
-
-  const deletedCount = itemRepository.deleteMany(ids);
-
-  itemsToDelete.forEach((item) => {
-    stockHistoryService.recordItemDeleted(item);
-  });
-
-  return deletedCount;
+export async function getItemStats(): Promise<{ totalQuantity: number; totalValue: number }> {
+  return api.get('/items/stats');
 }
 
-export function updateItemsCategory(ids: number[], category: string): number {
-  const oldCategories = new Map<number, string>();
-
-  // Get existing categories before update
-  ids.forEach((id) => {
-    const item = itemRepository.getById(id);
-    if (item) {
-      oldCategories.set(id, item.category);
-    }
-  });
-
-  const updatedCount = itemRepository.updateCategoryBulk(ids, category, new Date().toISOString());
-
-  // Get updated items for history
-  const affectedItems = ids
-    .map((id) => itemRepository.getById(id))
-    .filter((item): item is Item => item !== null);
-
-  stockHistoryService.recordBulkCategoryChange(affectedItems, oldCategories, category);
-
-  return updatedCount;
+export async function deleteItems(ids: number[]): Promise<number> {
+  await api.post('/items/bulk-delete', { ids });
+  return ids.length;
 }
 
-export function getLowStockItems(threshold: number): Item[] {
-  return itemRepository.getLowStock(threshold);
+export async function updateItemsCategory(ids: number[], category: string): Promise<number> {
+  await api.put('/items/bulk-category', { ids, category });
+  return ids.length;
 }
 
-export function getItemsNeedingReorder(): Item[] {
-  return itemRepository.getItemsNeedingReorder();
+export async function getLowStockItems(threshold: number): Promise<Item[]> {
+  return api.get<Item[]>(`/items/low-stock?threshold=${threshold}`);
+}
+
+export async function getItemsNeedingReorder(): Promise<Item[]> {
+  return api.get<Item[]>('/items/reorder');
 }
