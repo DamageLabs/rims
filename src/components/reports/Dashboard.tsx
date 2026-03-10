@@ -15,9 +15,11 @@ import {
 } from 'recharts';
 import { FaBox, FaDollarSign, FaExclamationTriangle, FaHistory } from 'react-icons/fa';
 import * as itemService from '../../services/itemService';
+import * as inventoryTypeService from '../../services/inventoryTypeService';
 import * as stockHistoryService from '../../services/stockHistoryService';
 import { formatCurrency } from '../../utils/formatters';
-import { LOW_STOCK_THRESHOLD } from '../../constants/config';
+import { LOW_STOCK_THRESHOLD, LOW_STOCK_TYPE_NAMES } from '../../constants/config';
+import { InventoryType } from '../../types/InventoryType';
 import { useTheme } from '../../contexts/ThemeContext';
 import { Item } from '../../types/Item';
 import { StockHistoryEntry } from '../../types/StockHistory';
@@ -58,29 +60,41 @@ function StatCard({ title, value, icon, variant, link }: StatCardProps) {
 export default function Dashboard() {
   const { isDark } = useTheme();
   const [items, setItems] = useState<Item[]>([]);
+  const [inventoryTypes, setInventoryTypes] = useState<InventoryType[]>([]);
   const [recentHistory, setRecentHistory] = useState<StockHistoryEntry[]>([]);
 
   useEffect(() => {
     const loadData = async () => {
-      const [loadedItems, loadedHistory] = await Promise.all([
+      const [loadedItems, loadedTypes, loadedHistory] = await Promise.all([
         itemService.getAllItems(),
+        inventoryTypeService.getAllTypes(),
         stockHistoryService.getRecentHistory(10),
       ]);
       setItems(loadedItems);
+      setInventoryTypes(loadedTypes);
       setRecentHistory(loadedHistory);
     };
     loadData();
   }, []);
 
+  const lowStockTypeIds = useMemo(() => {
+    return new Set(
+      inventoryTypes
+        .filter((t) => LOW_STOCK_TYPE_NAMES.includes(t.name))
+        .map((t) => t.id)
+    );
+  }, [inventoryTypes]);
+
   const stats = useMemo(() => {
     const totalItems = items.length;
     const totalQuantity = items.reduce((sum, item) => sum + item.quantity, 0);
     const totalValue = items.reduce((sum, item) => sum + item.value, 0);
-    const lowStockCount = items.filter((item) => item.quantity <= LOW_STOCK_THRESHOLD && item.quantity > 0).length;
-    const outOfStockCount = items.filter((item) => item.quantity === 0).length;
+    const stockEligible = items.filter((item) => lowStockTypeIds.has(item.inventoryTypeId));
+    const lowStockCount = stockEligible.filter((item) => item.quantity <= LOW_STOCK_THRESHOLD && item.quantity > 0).length;
+    const outOfStockCount = stockEligible.filter((item) => item.quantity === 0).length;
 
     return { totalItems, totalQuantity, totalValue, lowStockCount, outOfStockCount };
-  }, [items]);
+  }, [items, lowStockTypeIds]);
 
   const categoryData = useMemo(() => {
     const categoryMap = new Map<string, { count: number; value: number; quantity: number }>();
