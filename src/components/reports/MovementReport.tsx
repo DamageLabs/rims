@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Card, Table, Row, Col, Form, Button, ButtonGroup, Badge } from 'react-bootstrap';
 import { FaFileExcel, FaTimes } from 'react-icons/fa';
 import {
@@ -13,6 +13,7 @@ import {
 } from 'recharts';
 import * as stockHistoryService from '../../services/stockHistoryService';
 import * as itemService from '../../services/itemService';
+import { Item } from '../../types/Item';
 import { StockChangeType, StockHistoryEntry } from '../../types/StockHistory';
 import { useTheme } from '../../contexts/ThemeContext';
 import Pagination from '../common/Pagination';
@@ -21,7 +22,7 @@ const ITEMS_PER_PAGE = 25;
 
 export default function MovementReport() {
   const { isDark } = useTheme();
-  const allItems = itemService.getAllItems();
+  const [allItems, setAllItems] = useState<Item[]>([]);
 
   // Filter state
   const [startDate, setStartDate] = useState('');
@@ -29,14 +30,27 @@ export default function MovementReport() {
   const [changeType, setChangeType] = useState<StockChangeType | ''>('');
   const [itemId, setItemId] = useState<number | ''>('');
   const [currentPage, setCurrentPage] = useState(1);
+  const [filteredHistory, setFilteredHistory] = useState<StockHistoryEntry[]>([]);
 
-  const filteredHistory = useMemo(() => {
-    return stockHistoryService.getFilteredHistory({
-      startDate: startDate || undefined,
-      endDate: endDate || undefined,
-      changeType: changeType || undefined,
-      itemId: itemId ? Number(itemId) : undefined,
-    });
+  useEffect(() => {
+    const loadItems = async () => {
+      const items = await itemService.getAllItems();
+      setAllItems(items);
+    };
+    loadItems();
+  }, []);
+
+  useEffect(() => {
+    const loadHistory = async () => {
+      const history = await stockHistoryService.getFilteredHistory({
+        startDate: startDate || undefined,
+        endDate: endDate || undefined,
+        changeType: changeType || undefined,
+        itemId: itemId ? Number(itemId) : undefined,
+      });
+      setFilteredHistory(history);
+    };
+    loadHistory();
   }, [startDate, endDate, changeType, itemId]);
 
   const paginatedHistory = useMemo(() => {

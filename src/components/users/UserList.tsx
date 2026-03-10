@@ -17,29 +17,29 @@ export default function UserList() {
     loadUsers();
   }, []);
 
-  const loadUsers = () => {
-    const allUsers = userService.getAllUsers();
+  const loadUsers = async () => {
+    const allUsers = await userService.getAllUsers();
     setUsers(allUsers);
   };
 
-  const handleRoleChange = (userId: number, newRole: UserRole) => {
-    const updatedUser = userService.updateUserRole(userId, newRole);
+  const handleRoleChange = async (userId: number, newRole: UserRole) => {
+    const updatedUser = await userService.updateUserRole(userId, newRole);
     if (updatedUser) {
       showSuccess('User role updated successfully.');
-      loadUsers();
+      await loadUsers();
     } else {
       showError('Failed to update user role.');
     }
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!deleteModalUser || !currentUser) return;
 
     try {
-      const success = userService.deleteUser(deleteModalUser.id, currentUser.id);
+      const success = await userService.deleteUser(deleteModalUser.id, currentUser.id);
       if (success) {
         showSuccess('User was successfully deleted.');
-        loadUsers();
+        await loadUsers();
       } else {
         showError('Failed to delete user.');
       }

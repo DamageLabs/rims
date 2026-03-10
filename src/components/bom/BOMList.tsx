@@ -10,6 +10,8 @@ import EmptyState from '../common/EmptyState';
 
 export default function BOMList() {
   const [boms, setBoms] = useState<BOM[]>([]);
+  const [bomCosts, setBomCosts] = useState<Map<number, string>>(new Map());
+  const [bomAvailability, setBomAvailability] = useState<Map<number, boolean>>(new Map());
   const [deleteTarget, setDeleteTarget] = useState<BOM | null>(null);
   const { showSuccess, showError } = useAlert();
 
@@ -17,34 +19,33 @@ export default function BOMList() {
     loadBOMs();
   }, []);
 
-  const loadBOMs = () => {
-    setBoms(bomService.getAllBOMs());
+  const loadBOMs = async () => {
+    const allBOMs = await bomService.getAllBOMs();
+    setBoms(allBOMs);
+
+    const costs = new Map<number, string>();
+    const availability = new Map<number, boolean>();
+    for (const bom of allBOMs) {
+      const breakdown = await bomService.calculateBOMCost(bom.id);
+      costs.set(bom.id, breakdown ? `$${breakdown.totalCost.toFixed(2)}` : 'N/A');
+      const avail = await bomService.checkAvailability(bom.id);
+      availability.set(bom.id, avail.canBuild);
+    }
+    setBomCosts(costs);
+    setBomAvailability(availability);
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!deleteTarget) return;
 
-    const success = bomService.deleteBOM(deleteTarget.id);
+    const success = await bomService.deleteBOM(deleteTarget.id);
     if (success) {
       showSuccess(`BOM "${deleteTarget.name}" deleted.`);
-      loadBOMs();
+      await loadBOMs();
     } else {
       showError('Failed to delete BOM.');
     }
     setDeleteTarget(null);
-  };
-
-  const getBOMCost = (bom: BOM): string => {
-    const breakdown = bomService.calculateBOMCost(bom.id);
-    return breakdown ? `$${breakdown.totalCost.toFixed(2)}` : 'N/A';
-  };
-
-  const getCanBuildBadge = (bom: BOM) => {
-    const availability = bomService.checkAvailability(bom.id);
-    if (availability.canBuild) {
-      return <Badge bg="success">Can Build</Badge>;
-    }
-    return <Badge bg="warning">Missing Parts</Badge>;
   };
 
   return (
@@ -83,8 +84,14 @@ export default function BOMList() {
                     <Link to={`/bom/${bom.id}`}>{bom.name}</Link>
                   </td>
                   <td>{bom.items.length}</td>
-                  <td>{getBOMCost(bom)}</td>
-                  <td>{getCanBuildBadge(bom)}</td>
+                  <td>{bomCosts.get(bom.id) ?? 'N/A'}</td>
+                  <td>
+                    {bomAvailability.get(bom.id) ? (
+                      <Badge bg="success">Can Build</Badge>
+                    ) : (
+                      <Badge bg="warning">Missing Parts</Badge>
+                    )}
+                  </td>
                   <td>{new Date(bom.createdAt).toLocaleDateString()}</td>
                   <td>
                     <div className="d-flex gap-1">

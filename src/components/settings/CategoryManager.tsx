@@ -22,17 +22,21 @@ export default function CategoryManager() {
   const { showSuccess, showError } = useAlert();
 
   useEffect(() => {
-    setInventoryTypes(inventoryTypeService.getAllTypes());
+    const loadTypes = async () => {
+      const types = await inventoryTypeService.getAllTypes();
+      setInventoryTypes(types);
+    };
+    loadTypes();
     loadCategories();
   }, []);
 
-  const loadCategories = () => {
+  const loadCategories = async () => {
     if (filterTypeId) {
-      setCategories(categoryService.getCategoriesByType(parseInt(filterTypeId)));
+      setCategories(await categoryService.getCategoriesByType(parseInt(filterTypeId)));
     } else {
-      setCategories(categoryService.getAllCategories());
+      setCategories(await categoryService.getAllCategories());
     }
-    const counts = categoryService.getCategoryItemCounts();
+    const counts = await categoryService.getCategoryItemCounts();
     setItemCounts(new Map(counts.map((c) => [c.name, c.count])));
   };
 
@@ -59,53 +63,53 @@ export default function CategoryManager() {
     setName('');
   };
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
 
     try {
       if (editingCategory) {
-        categoryService.updateCategory(editingCategory.id, { name });
+        await categoryService.updateCategory(editingCategory.id, { name });
         showSuccess(`Category updated to "${name}".`);
       } else {
-        categoryService.createCategory({ name, sortOrder: categories.length, inventoryTypeId: modalTypeId });
+        await categoryService.createCategory({ name, sortOrder: categories.length, inventoryTypeId: modalTypeId });
         showSuccess(`Category "${name}" created.`);
       }
       handleCloseModal();
-      loadCategories();
+      await loadCategories();
     } catch (error) {
       showError(error instanceof Error ? error.message : 'Operation failed.');
     }
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!deleteTarget) return;
 
     try {
-      categoryService.deleteCategory(deleteTarget.id);
+      await categoryService.deleteCategory(deleteTarget.id);
       showSuccess(`Category "${deleteTarget.name}" deleted.`);
-      loadCategories();
+      await loadCategories();
     } catch (error) {
       showError(error instanceof Error ? error.message : 'Failed to delete category.');
     }
     setDeleteTarget(null);
   };
 
-  const handleMoveUp = (index: number) => {
+  const handleMoveUp = async (index: number) => {
     if (index === 0) return;
     const newOrder = [...categories];
     [newOrder[index - 1], newOrder[index]] = [newOrder[index], newOrder[index - 1]];
     const orderedIds = newOrder.map((c) => c.id);
-    categoryService.reorderCategories(orderedIds);
-    loadCategories();
+    await categoryService.reorderCategories(orderedIds);
+    await loadCategories();
   };
 
-  const handleMoveDown = (index: number) => {
+  const handleMoveDown = async (index: number) => {
     if (index === categories.length - 1) return;
     const newOrder = [...categories];
     [newOrder[index], newOrder[index + 1]] = [newOrder[index + 1], newOrder[index]];
     const orderedIds = newOrder.map((c) => c.id);
-    categoryService.reorderCategories(orderedIds);
-    loadCategories();
+    await categoryService.reorderCategories(orderedIds);
+    await loadCategories();
   };
 
   return (

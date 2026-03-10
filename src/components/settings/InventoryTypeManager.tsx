@@ -20,18 +20,21 @@ export default function InventoryTypeManager() {
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [deleteId, setDeleteId] = useState<number | null>(null);
 
-  const loadTypes = () => setTypes(inventoryTypeService.getAllTypes());
+  const loadTypes = async () => {
+    const allTypes = await inventoryTypeService.getAllTypes();
+    setTypes(allTypes);
+  };
 
   useEffect(() => { loadTypes(); }, []);
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
     if (!newName.trim()) return;
     try {
-      inventoryTypeService.createType({ name: newName, icon: newIcon, schema: [] });
+      await inventoryTypeService.createType({ name: newName, icon: newIcon, schema: [] });
       showSuccess(`Inventory type "${newName}" created.`);
       setNewName('');
       setNewIcon('');
-      loadTypes();
+      await loadTypes();
     } catch (err) {
       showError(err instanceof Error ? err.message : 'Failed to create type.');
     }
@@ -45,28 +48,28 @@ export default function InventoryTypeManager() {
     setExpandedId(type.id);
   };
 
-  const saveEdit = () => {
+  const saveEdit = async () => {
     if (!editingId) return;
     try {
-      inventoryTypeService.updateType(editingId, {
+      await inventoryTypeService.updateType(editingId, {
         name: editName,
         icon: editIcon,
         schema: editSchema,
       });
       showSuccess('Inventory type updated.');
       setEditingId(null);
-      loadTypes();
+      await loadTypes();
     } catch (err) {
       showError(err instanceof Error ? err.message : 'Failed to update type.');
     }
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!deleteId) return;
     try {
-      inventoryTypeService.deleteType(deleteId);
+      await inventoryTypeService.deleteType(deleteId);
       showSuccess('Inventory type deleted.');
-      loadTypes();
+      await loadTypes();
     } catch (err) {
       showError(err instanceof Error ? err.message : 'Failed to delete type.');
     }

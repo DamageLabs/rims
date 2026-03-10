@@ -49,51 +49,82 @@ export default function ItemForm() {
 
   // Load inventory types
   useEffect(() => {
-    setInventoryTypes(inventoryTypeService.getAllTypes());
-  }, []);
+    async function loadTypes() {
+      try {
+        const types = await inventoryTypeService.getAllTypes();
+        setInventoryTypes(types);
+      } catch {
+        showError('Failed to load inventory types.');
+      }
+    }
+    loadTypes();
+  }, [showError]);
 
   // Load categories when type changes
   useEffect(() => {
-    if (formData.inventoryTypeId) {
-      const cats = categoryService.getCategoryNamesByType(formData.inventoryTypeId);
-      setCategories(cats);
-      if (!isEditing && cats.length > 0 && !cats.includes(formData.category)) {
-        setFormData((prev) => ({ ...prev, category: cats[0] }));
+    async function loadCategories() {
+      if (formData.inventoryTypeId) {
+        try {
+          const cats = await categoryService.getCategoryNamesByType(formData.inventoryTypeId);
+          setCategories(cats);
+          if (!isEditing && cats.length > 0 && !cats.includes(formData.category)) {
+            setFormData((prev) => ({ ...prev, category: cats[0] }));
+          }
+        } catch {
+          // silently handle
+        }
       }
     }
+    loadCategories();
   }, [formData.inventoryTypeId, isEditing]);
 
   useEffect(() => {
-    if (id) {
-      const item = itemService.getItemById(parseInt(id));
-      if (item) {
-        setFormData({
-          name: item.name,
-          description: item.description,
-          quantity: item.quantity,
-          unitValue: item.unitValue,
-          picture: item.picture,
-          category: item.category,
-          location: item.location,
-          barcode: item.barcode,
-          reorderPoint: item.reorderPoint,
-          inventoryTypeId: item.inventoryTypeId,
-          customFields: item.customFields || {},
-        });
-        if (item.picture) {
-          setPreviewImage(item.picture);
+    async function loadItem() {
+      if (id) {
+        try {
+          const item = await itemService.getItemById(parseInt(id));
+          if (item) {
+            setFormData({
+              name: item.name,
+              description: item.description,
+              quantity: item.quantity,
+              unitValue: item.unitValue,
+              picture: item.picture,
+              category: item.category,
+              location: item.location,
+              barcode: item.barcode,
+              reorderPoint: item.reorderPoint,
+              inventoryTypeId: item.inventoryTypeId,
+              customFields: item.customFields || {},
+            });
+            if (item.picture) {
+              setPreviewImage(item.picture);
+            }
+          } else {
+            showError('Item not found.');
+            navigate('/items');
+          }
+        } catch {
+          showError('Failed to load item.');
+          navigate('/items');
         }
-      } else {
-        showError('Item not found.');
-        navigate('/items');
       }
     }
+    loadItem();
   }, [id, navigate, showError]);
 
   useEffect(() => {
-    if (!isEditing) {
-      setTemplates(itemTemplateService.getAllTemplates());
+    async function loadTemplates() {
+      if (!isEditing) {
+        try {
+          const allTemplates = await itemTemplateService.getAllTemplates();
+          setTemplates(allTemplates);
+        } catch {
+          // silently handle
+        }
+      }
     }
+    loadTemplates();
   }, [isEditing]);
 
   const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -154,25 +185,29 @@ export default function ItemForm() {
     setImageCompression(null);
   };
 
-  const handleTemplateSelect = (e: ChangeEvent<HTMLSelectElement>) => {
+  const handleTemplateSelect = async (e: ChangeEvent<HTMLSelectElement>) => {
     const templateId = e.target.value;
     if (!templateId) return;
-    const template = itemTemplateService.getTemplateById(parseInt(templateId));
-    if (template) {
-      setFormData((prev) => ({
-        ...prev,
-        ...template.defaultFields,
-        category: template.category,
-      }));
-      showSuccess(`Template "${template.name}" applied.`);
+    try {
+      const template = await itemTemplateService.getTemplateById(parseInt(templateId));
+      if (template) {
+        setFormData((prev) => ({
+          ...prev,
+          ...template.defaultFields,
+          category: template.category,
+        }));
+        showSuccess(`Template "${template.name}" applied.`);
+      }
+    } catch {
+      showError('Failed to load template.');
     }
   };
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     try {
       if (isEditing) {
-        const updatedItem = itemService.updateItem(parseInt(id!), formData);
+        const updatedItem = await itemService.updateItem(parseInt(id!), formData);
         if (updatedItem) {
           showSuccess('Item was successfully updated.');
           navigate(`/items/${updatedItem.id}`);
@@ -180,7 +215,7 @@ export default function ItemForm() {
           showError('Failed to update item.');
         }
       } else {
-        const newItem = itemService.createItem(formData);
+        const newItem = await itemService.createItem(formData);
         showSuccess('Item was successfully created.');
         navigate(`/items/${newItem.id}`);
       }

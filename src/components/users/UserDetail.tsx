@@ -14,24 +14,27 @@ export default function UserDetail() {
   const [user, setUser] = useState<UserWithoutPassword | null>(null);
 
   useEffect(() => {
-    if (id) {
-      const userId = parseInt(id);
+    const loadUser = async () => {
+      if (id) {
+        const userId = parseInt(id);
 
-      // Non-admins can only view their own profile
-      if (!isAdmin && currentUser?.id !== userId) {
-        showError('Access denied.');
-        navigate('/');
-        return;
-      }
+        // Non-admins can only view their own profile
+        if (!isAdmin && currentUser?.id !== userId) {
+          showError('Access denied.');
+          navigate('/');
+          return;
+        }
 
-      const foundUser = userService.getUserById(userId);
-      if (foundUser) {
-        setUser(foundUser);
-      } else {
-        showError('User not found.');
-        navigate('/users');
+        const foundUser = await userService.getUserById(userId);
+        if (foundUser) {
+          setUser(foundUser);
+        } else {
+          showError('User not found.');
+          navigate('/users');
+        }
       }
-    }
+    };
+    loadUser();
   }, [id, navigate, showError, currentUser, isAdmin]);
 
   const formatDate = (dateString: string | null) => {

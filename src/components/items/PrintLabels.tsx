@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { Item } from '../../types/Item';
 import { Card, Form, Button, Row, Col, Table, Badge } from 'react-bootstrap';
 import { FaPrint, FaBarcode, FaQrcode, FaCheck } from 'react-icons/fa';
 import JsBarcode from 'jsbarcode';
@@ -24,8 +25,20 @@ const LABEL_SIZES = {
 };
 
 export default function PrintLabels() {
-  const items = useMemo(() => itemService.getAllItems(), []);
+  const [items, setItems] = useState<Item[]>([]);
   const printRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    async function loadItems() {
+      try {
+        const allItems = await itemService.getAllItems();
+        setItems(allItems);
+      } catch {
+        // silently handle
+      }
+    }
+    loadItems();
+  }, []);
 
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [config, setConfig] = useState<LabelConfig>({

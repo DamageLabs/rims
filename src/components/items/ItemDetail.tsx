@@ -24,27 +24,39 @@ export default function ItemDetail() {
   const [isLoadingPrices, setIsLoadingPrices] = useState(false);
 
   useEffect(() => {
-    if (id) {
-      const foundItem = itemService.getItemById(parseInt(id));
-      if (foundItem) {
-        setItem(foundItem);
-        const type = inventoryTypeService.getTypeById(foundItem.inventoryTypeId);
-        setInventoryType(type);
-      } else {
-        showError('Item not found.');
-        navigate('/items');
+    async function loadItem() {
+      if (id) {
+        try {
+          const foundItem = await itemService.getItemById(parseInt(id));
+          if (foundItem) {
+            setItem(foundItem);
+            const type = await inventoryTypeService.getTypeById(foundItem.inventoryTypeId);
+            setInventoryType(type);
+          } else {
+            showError('Item not found.');
+            navigate('/items');
+          }
+        } catch {
+          showError('Failed to load item.');
+          navigate('/items');
+        }
       }
     }
+    loadItem();
   }, [id, navigate, showError]);
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!item) return;
 
-    const success = itemService.deleteItem(item.id);
-    if (success) {
-      showSuccess('Item was successfully destroyed.');
-      navigate('/items');
-    } else {
+    try {
+      const success = await itemService.deleteItem(item.id);
+      if (success) {
+        showSuccess('Item was successfully destroyed.');
+        navigate('/items');
+      } else {
+        showError('Failed to delete item.');
+      }
+    } catch {
       showError('Failed to delete item.');
     }
     setShowDeleteModal(false);

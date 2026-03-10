@@ -16,7 +16,7 @@ export default function EditProfile() {
   const [currentPassword, setCurrentPassword] = useState('');
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
 
     if (password && password !== passwordConfirmation) {
@@ -25,7 +25,7 @@ export default function EditProfile() {
     }
 
     try {
-      const updatedUser = updateProfile({
+      const updatedUser = await updateProfile({
         email: email !== user?.email ? email : undefined,
         password: password || undefined,
         currentPassword,
@@ -40,8 +40,8 @@ export default function EditProfile() {
     }
   };
 
-  const handleDeleteAccount = () => {
-    const result = deleteAccount();
+  const handleDeleteAccount = async () => {
+    const result = await deleteAccount();
     if (result) {
       showSuccess('Your account has been cancelled.');
       navigate('/');

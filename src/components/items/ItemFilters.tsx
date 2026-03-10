@@ -29,15 +29,32 @@ export default function ItemFilters({
   const hasFilters = searchTerm || categoryFilter || typeFilter;
 
   useEffect(() => {
-    setInventoryTypes(inventoryTypeService.getAllTypes());
+    async function loadTypes() {
+      try {
+        const types = await inventoryTypeService.getAllTypes();
+        setInventoryTypes(types);
+      } catch {
+        // silently handle
+      }
+    }
+    loadTypes();
   }, []);
 
   useEffect(() => {
-    if (typeFilter) {
-      setCategories(categoryService.getCategoryNamesByType(parseInt(typeFilter)));
-    } else {
-      setCategories(categoryService.getCategoryNames());
+    async function loadCategories() {
+      try {
+        if (typeFilter) {
+          const cats = await categoryService.getCategoryNamesByType(parseInt(typeFilter));
+          setCategories(cats);
+        } else {
+          const cats = await categoryService.getCategoryNames();
+          setCategories(cats);
+        }
+      } catch {
+        // silently handle
+      }
     }
+    loadCategories();
   }, [typeFilter]);
 
   return (

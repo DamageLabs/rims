@@ -69,18 +69,22 @@ export default function BarcodeScanner() {
     lookupBarcode(barcode);
   };
 
-  const lookupBarcode = (barcode: string) => {
-    const items = itemService.getAllItems();
-    const item = items.find((i) => i.barcode.toLowerCase() === barcode.toLowerCase());
+  const lookupBarcode = async (barcode: string) => {
+    try {
+      const items = await itemService.getAllItems();
+      const item = items.find((i) => i.barcode.toLowerCase() === barcode.toLowerCase());
 
-    setFoundItem(item || null);
-    setRecentScans((prev) => [
-      { barcode, item: item || null, time: new Date() },
-      ...prev.slice(0, 9),
-    ]);
+      setFoundItem(item || null);
+      setRecentScans((prev) => [
+        { barcode, item: item || null, time: new Date() },
+        ...prev.slice(0, 9),
+      ]);
 
-    if (item) {
-      showSuccess(`Found: ${item.name}`);
+      if (item) {
+        showSuccess(`Found: ${item.name}`);
+      }
+    } catch {
+      showError('Failed to look up barcode.');
     }
   };
 
@@ -92,17 +96,21 @@ export default function BarcodeScanner() {
     }
   };
 
-  const adjustQuantity = (item: Item, delta: number) => {
-    const newQuantity = Math.max(0, item.quantity + delta);
-    const updated = itemService.updateItem(item.id, { quantity: newQuantity });
-    if (updated) {
-      setFoundItem(updated);
-      showSuccess(`Quantity updated to ${newQuantity}`);
-      setRecentScans((prev) =>
-        prev.map((scan) =>
-          scan.item?.id === item.id ? { ...scan, item: updated } : scan
-        )
-      );
+  const adjustQuantity = async (item: Item, delta: number) => {
+    try {
+      const newQuantity = Math.max(0, item.quantity + delta);
+      const updated = await itemService.updateItem(item.id, { quantity: newQuantity });
+      if (updated) {
+        setFoundItem(updated);
+        showSuccess(`Quantity updated to ${newQuantity}`);
+        setRecentScans((prev) =>
+          prev.map((scan) =>
+            scan.item?.id === item.id ? { ...scan, item: updated } : scan
+          )
+        );
+      }
+    } catch {
+      showError('Failed to update quantity.');
     }
   };
 

@@ -16,25 +16,34 @@ export default function BOMDetail() {
 
   const [bom, setBom] = useState<BOM | null>(null);
   const [breakdown, setBreakdown] = useState<BOMCostBreakdown | null>(null);
+  const [availability, setAvailability] = useState<{ canBuild: boolean; missingItems: string[] }>({ canBuild: false, missingItems: [] });
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   useEffect(() => {
-    if (id) {
-      const foundBOM = bomService.getBOMById(parseInt(id));
-      if (foundBOM) {
-        setBom(foundBOM);
-        setBreakdown(bomService.calculateBOMCost(foundBOM.id));
-      } else {
-        showError('BOM not found.');
-        navigate('/bom');
+    const loadBOM = async () => {
+      if (id) {
+        const foundBOM = await bomService.getBOMById(parseInt(id));
+        if (foundBOM) {
+          setBom(foundBOM);
+          const [cost, avail] = await Promise.all([
+            bomService.calculateBOMCost(foundBOM.id),
+            bomService.checkAvailability(foundBOM.id),
+          ]);
+          setBreakdown(cost);
+          setAvailability(avail);
+        } else {
+          showError('BOM not found.');
+          navigate('/bom');
+        }
       }
-    }
+    };
+    loadBOM();
   }, [id, navigate, showError]);
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!bom) return;
 
-    const success = bomService.deleteBOM(bom.id);
+    const success = await bomService.deleteBOM(bom.id);
     if (success) {
       showSuccess('BOM deleted successfully.');
       navigate('/bom');
@@ -44,11 +53,11 @@ export default function BOMDetail() {
     setShowDeleteModal(false);
   };
 
-  const handleDuplicate = () => {
+  const handleDuplicate = async () => {
     if (!bom) return;
 
     const newName = `${bom.name} (Copy)`;
-    const duplicated = bomService.duplicateBOM(bom.id, newName);
+    const duplicated = await bomService.duplicateBOM(bom.id, newName);
     if (duplicated) {
       showSuccess(`BOM duplicated as "${newName}".`);
       navigate(`/bom/${duplicated.id}`);
@@ -60,8 +69,6 @@ export default function BOMDetail() {
   if (!bom || !breakdown) {
     return <SkeletonDetailPage />;
   }
-
-  const availability = bomService.checkAvailability(bom.id);
 
   const breadcrumbItems = [
     { label: 'Bill of Materials', path: '/bom' },

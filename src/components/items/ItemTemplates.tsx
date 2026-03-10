@@ -29,16 +29,28 @@ export default function ItemTemplates() {
   });
 
   useEffect(() => {
-    loadTemplates();
-    const cats = categoryService.getCategoryNames();
-    setCategories(cats);
-    if (cats.length > 0) {
-      setFormData((prev) => ({ ...prev, category: prev.category || cats[0] }));
+    async function loadData() {
+      try {
+        await loadTemplates();
+        const cats = await categoryService.getCategoryNames();
+        setCategories(cats);
+        if (cats.length > 0) {
+          setFormData((prev) => ({ ...prev, category: prev.category || cats[0] }));
+        }
+      } catch {
+        // silently handle
+      }
     }
+    loadData();
   }, []);
 
-  const loadTemplates = () => {
-    setTemplates(itemTemplateService.getAllTemplates());
+  const loadTemplates = async () => {
+    try {
+      const allTemplates = await itemTemplateService.getAllTemplates();
+      setTemplates(allTemplates);
+    } catch {
+      // silently handle
+    }
   };
 
   const resetForm = () => {
@@ -91,37 +103,41 @@ export default function ItemTemplates() {
     }
   };
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
 
     try {
       if (editingTemplate) {
-        const updated = itemTemplateService.updateTemplate(editingTemplate.id, formData);
+        const updated = await itemTemplateService.updateTemplate(editingTemplate.id, formData);
         if (updated) {
           showSuccess('Template updated successfully.');
         } else {
           showError('Failed to update template.');
         }
       } else {
-        itemTemplateService.createTemplate(formData);
+        await itemTemplateService.createTemplate(formData);
         showSuccess('Template created successfully.');
       }
 
       handleCloseModal();
-      loadTemplates();
+      await loadTemplates();
     } catch (error) {
       showError(error instanceof Error ? error.message : 'Operation failed.');
     }
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!deleteTarget) return;
 
-    const success = itemTemplateService.deleteTemplate(deleteTarget.id);
-    if (success) {
-      showSuccess(`Template "${deleteTarget.name}" deleted.`);
-      loadTemplates();
-    } else {
+    try {
+      const success = await itemTemplateService.deleteTemplate(deleteTarget.id);
+      if (success) {
+        showSuccess(`Template "${deleteTarget.name}" deleted.`);
+        await loadTemplates();
+      } else {
+        showError('Failed to delete template.');
+      }
+    } catch {
       showError('Failed to delete template.');
     }
     setDeleteTarget(null);
